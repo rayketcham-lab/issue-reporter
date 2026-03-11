@@ -23,7 +23,7 @@ No backend required. No database. No API keys beyond a GitHub token scoped to is
 Add two lines to your page. The widget calls the GitHub API directly.
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.0.4/issue-reporter.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.0.5/issue-reporter.js"></script>
 <script>
   IssueReporter.init({
     github: {
@@ -55,7 +55,7 @@ This token can *only* create issues on that one repo. It can't read your code, p
 Token stays on your server. The widget POSTs JSON to a route on your app, your app runs `gh issue create`. No token in the browser, no extra process.
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.0.4/issue-reporter.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.0.5/issue-reporter.js"></script>
 <script>
   IssueReporter.init({ endpoint: "/api/report", projectName: "My App" });
 </script>
@@ -274,7 +274,7 @@ For a more complete backend with rate limiting, CORS, labels, and conventional-c
 ## Widget Options
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.0.4/issue-reporter.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.0.5/issue-reporter.js"></script>
 <script>
   IssueReporter.init({
     // --- Pick one mode ---
@@ -310,7 +310,7 @@ IssueReporter.destroy(); // Remove the widget entirely
 ### Self-hosting the JS
 
 ```bash
-curl -O https://raw.githubusercontent.com/rayketcham-lab/issue-reporter/v2.0.4/issue-reporter.js
+curl -O https://raw.githubusercontent.com/rayketcham-lab/issue-reporter/v2.0.5/issue-reporter.js
 ```
 
 No build step. No dependencies. One file.

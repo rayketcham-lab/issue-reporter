@@ -24,7 +24,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "2.0.4";
+  var VERSION = "2.0.5";
   var REPO_URL = "https://github.com/rayketcham-lab/issue-reporter";
 
   // Guard against double-init
@@ -235,7 +235,7 @@
     ".ir-step-line{flex:1;height:1px;background:#1f2937;}",
 
     // Scrollable body
-    ".ir-body{padding:20px;overflow-y:auto;flex:1;min-height:0;}",
+    ".ir-body{padding:20px;overflow-y:auto;flex:1;min-height:0;-webkit-overflow-scrolling:touch;}",
 
     // Type selection cards
     ".ir-types{display:flex;flex-direction:column;gap:8px;}",
@@ -303,8 +303,8 @@
       "box-sizing:border-box;transition:border-color 0.15s;resize:vertical;",
     "}",
     ".ir-textarea:focus,.ir-input:focus{outline:none;border-color:rgba(59,130,246,0.5);}",
-    ".ir-textarea{min-height:100px;}",
-    ".ir-textarea--short{min-height:60px;}",
+    ".ir-textarea{min-height:100px;max-height:200px;}",
+    ".ir-textarea--short{min-height:60px;max-height:120px;}",
     ".ir-textarea::placeholder,.ir-input::placeholder{color:#4b5563;}",
     ".ir-char-count{font-size:11px;color:#4b5563;text-align:right;margin-top:4px;}",
 
