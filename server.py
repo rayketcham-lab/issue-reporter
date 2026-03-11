@@ -56,7 +56,6 @@ def _is_rate_limited(ip: str) -> bool:
 # Input validation
 # ---------------------------------------------------------------------------
 
-VALID_TYPES = {"bug", "feature_request", "data_issue", "ui_bug", "broken_link", "performance", "other"}
 VALID_SEVERITIES = {"low", "medium", "high", "critical"}
 
 # Strip markdown image/link injection from structured metadata fields
@@ -103,6 +102,9 @@ _LABEL_MAP = {
     "performance": ["performance"],
     "other": ["bug"],
 }
+
+# Derive valid types from the prefix map — single source of truth
+VALID_TYPES: frozenset[str] = frozenset(_PREFIX_MAP.keys())
 
 
 def create_issue(
@@ -279,7 +281,7 @@ class ReportHandler(BaseHTTPRequestHandler):
         # Validate and sanitize all fields
         issue_type = data.get("type", "bug")
         if issue_type not in VALID_TYPES:
-            issue_type = "other"
+            issue_type = "bug"
 
         severity = data.get("severity", "medium")
         if severity not in VALID_SEVERITIES:
