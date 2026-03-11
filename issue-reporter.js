@@ -24,7 +24,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "2.0.2";
+  var VERSION = "2.0.3";
   var REPO_URL = "https://github.com/rayketcham-lab/issue-reporter";
 
   // Guard against double-init
@@ -1732,6 +1732,15 @@
             'Example: IssueReporter.init({ github: { repo: "owner/repo", token: "github_pat_xxxx" } }).'
           );
           return;
+        }
+        // Warn about token exposure on non-localhost origins
+        var host = window.location.hostname;
+        if (host !== "localhost" && host !== "127.0.0.1" && host !== "0.0.0.0" && host !== "[::1]") {
+          console.warn(
+            "IssueReporter: Direct GitHub mode exposes your PAT in page source. " +
+            "This is fine for internal tools but for public sites, use backend mode instead. " +
+            "See https://github.com/rayketcham-lab/issue-reporter#backend-integration"
+          );
         }
       } else if (!config.endpoint) {
         console.error(

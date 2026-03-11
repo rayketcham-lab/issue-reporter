@@ -16,7 +16,9 @@ Requires:
 from __future__ import annotations
 
 import argparse
+import hmac
 import json
+import re
 import subprocess
 import sys
 import time
@@ -48,6 +50,34 @@ def _is_rate_limited(ip: str) -> bool:
 
     bucket.append(now)
     return False
+
+
+# ---------------------------------------------------------------------------
+# Input validation
+# ---------------------------------------------------------------------------
+
+VALID_TYPES = {"bug", "feature_request", "data_issue", "ui_bug", "broken_link", "performance", "other"}
+VALID_SEVERITIES = {"low", "medium", "high", "critical"}
+
+# Strip markdown image/link injection from structured metadata fields
+_MD_IMAGE_RE = re.compile(r"!\[([^\]]*)\]\([^)]*\)")  # ![alt](url)
+_MD_LINK_RE = re.compile(r"\[([^\]]*)\]\([^)]*\)")    # [text](url)
+_FIELD_MAX = 500  # max length for metadata fields
+
+
+def _sanitize_meta(value: str) -> str:
+    """Sanitize a metadata field — strip markdown injection, enforce length."""
+    value = _MD_IMAGE_RE.sub(r"\1", value)  # ![alt](evil) → alt
+    value = _MD_LINK_RE.sub(r"\1", value)   # [text](evil) → text
+    return value[:_FIELD_MAX]
+
+
+def _sanitize_url(value: str) -> str:
+    """Validate URL starts with http(s) and sanitize."""
+    value = value.strip()[:2000]
+    if value and not value.startswith(("http://", "https://")):
+        return ""
+    return _sanitize_meta(value)
 
 
 # ---------------------------------------------------------------------------
@@ -214,7 +244,7 @@ class ReportHandler(BaseHTTPRequestHandler):
         # Auth check
         if self.auth_token:
             auth_header = self.headers.get("Authorization", "")
-            if auth_header != f"Bearer {self.auth_token}":
+            if not hmac.compare_digest(auth_header, f"Bearer {self.auth_token}"):
                 self._send_json(401, {"success": False, "error": "Unauthorized"})
                 return
 
@@ -246,22 +276,26 @@ class ReportHandler(BaseHTTPRequestHandler):
             self._send_json(400, {"success": False, "error": "description is required"})
             return
 
+        # Validate and sanitize all fields
         issue_type = data.get("type", "bug")
-        severity = data.get("severity", "medium")
-        context = (data.get("context") or "").strip()
-        project_name = (data.get("project_name") or "").strip()
-        page_url = (data.get("page_url") or "").strip()
-        expected_behavior = (data.get("expected_behavior") or "").strip()
-        page_title = (data.get("page_title") or "").strip()
-        page_type = (data.get("page_type") or "").strip()
-        section = (data.get("section") or "").strip()
-        element_text = (data.get("element_text") or "").strip()
-        console_errors = (data.get("console_errors") or "").strip()
-        last_api_calls = (data.get("last_api_calls") or "").strip()
+        if issue_type not in VALID_TYPES:
+            issue_type = "other"
 
-        # Validate severity
-        if severity not in ("low", "medium", "high", "critical"):
+        severity = data.get("severity", "medium")
+        if severity not in VALID_SEVERITIES:
             severity = "medium"
+
+        description = description[:5000]  # cap freeform text
+        context = (data.get("context") or "").strip()[:2000]
+        project_name = _sanitize_meta((data.get("project_name") or "").strip())
+        page_url = _sanitize_url((data.get("page_url") or ""))
+        expected_behavior = (data.get("expected_behavior") or "").strip()[:2000]
+        page_title = _sanitize_meta((data.get("page_title") or "").strip())
+        page_type = _sanitize_meta((data.get("page_type") or "").strip())
+        section = _sanitize_meta((data.get("section") or "").strip())
+        element_text = _sanitize_meta((data.get("element_text") or "").strip())
+        console_errors = (data.get("console_errors") or "").strip()[:3000]
+        last_api_calls = (data.get("last_api_calls") or "").strip()[:2000]
 
         # Create issue
         try:
@@ -294,7 +328,8 @@ class ReportHandler(BaseHTTPRequestHandler):
                 "error": "GitHub API timed out. Try again.",
             })
         except Exception as exc:
-            self._send_json(500, {"success": False, "error": str(exc)})
+            self.log_message("Issue creation failed: %s", str(exc))
+            self._send_json(500, {"success": False, "error": "Failed to create issue. Please try again."})
 
     def do_GET(self) -> None:
         """Health check endpoint."""
