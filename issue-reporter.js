@@ -24,7 +24,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "2.1.0";
+  var VERSION = "2.1.1";
   var REPO_URL = "https://github.com/rayketcham-lab/issue-reporter";
 
   // Guard against double-init
@@ -201,6 +201,9 @@
       "overflow:hidden;",
     "}",
     ".ir-backdrop--visible .ir-modal{transform:translateY(0);}",
+
+    // Content area — flex column so body scrolls and footer stays pinned
+    "#ir-content{display:flex;flex-direction:column;flex:1 1 auto;min-height:0;overflow:hidden;}",
 
     // Header
     ".ir-header{",
@@ -1479,7 +1482,7 @@
     content.appendChild(body);
 
     // Footer
-    var footer = el("div", { id: "ir-footer" });
+    var footer = el("div", { className: "ir-footer", id: "ir-footer" });
     var footerContent = buildFooter();
     while (footerContent.firstChild) {
       footer.appendChild(footerContent.firstChild);
