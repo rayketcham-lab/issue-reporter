@@ -644,17 +644,23 @@
     document.body.style.cursor = "crosshair";
 
     inspectHandlers.click = function (e) {
+      // Ignore clicks on our own widget elements (banner, cancel button, etc.)
+      if (e.target.closest && e.target.closest(".ir-widget")) {
+        return; // Let the event bubble normally to our cancel button
+      }
       e.preventDefault();
       e.stopPropagation();
       captureElement(e.target);
     };
 
     inspectHandlers.mouseover = function (e) {
+      if (e.target.closest && e.target.closest(".ir-widget")) return;
       e.target.style.outline = "2px solid #3b82f6";
       e.target.style.outlineOffset = "2px";
     };
 
     inspectHandlers.mouseout = function (e) {
+      if (e.target.closest && e.target.closest(".ir-widget")) return;
       e.target.style.outline = "";
       e.target.style.outlineOffset = "";
     };
