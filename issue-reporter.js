@@ -24,7 +24,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "2.0.5";
+  var VERSION = "2.1.0";
   var REPO_URL = "https://github.com/rayketcham-lab/issue-reporter";
 
   // Guard against double-init
@@ -194,7 +194,7 @@
     ".ir-modal{",
       "background:#111827;border:1px solid #374151;border-radius:16px;",
       "box-shadow:0 25px 80px rgba(0,0,0,0.5);",
-      "width:90%;max-width:520px;max-height:90vh;",
+      "width:94%;max-width:680px;max-height:90vh;",
       "display:flex;flex-direction:column;",
       "font-size:14px;line-height:1.5;color:#e5e7eb;",
       "transform:translateY(16px);transition:transform 0.25s ease;",
@@ -397,8 +397,12 @@
     // Error highlight on required fields
     ".ir-textarea--error{border-color:#ef4444 !important;}",
 
+    // Two-column layout for details step
+    ".ir-columns{display:grid;grid-template-columns:1fr 1fr;gap:0 20px;}",
+    ".ir-col-span{grid-column:1/-1;}",
+
     // Mobile
-    "@media(max-width:500px){",
+    "@media(max-width:600px){",
       ".ir-modal{width:96%;max-width:none;border-radius:12px;}",
       ".ir-body{padding:16px;}",
       ".ir-header{padding:14px 16px;}",
@@ -406,6 +410,7 @@
       ".ir-severity{flex-wrap:wrap;}",
       ".ir-sev-pill{flex:none;padding:6px 14px;}",
       ".ir-btn{padding:10px 16px;font-size:13px;}",
+      ".ir-columns{grid-template-columns:1fr;}",
     "}",
   ].join("\n");
 
@@ -1143,6 +1148,78 @@
       container.appendChild(sectionField);
     }
 
+    // --- Two-column grid for details ---
+    var grid = el("div", { className: "ir-columns" });
+
+    // LEFT COLUMN: Description + Expected behavior
+    var leftCol = el("div");
+
+    // Description
+    var descField = el("div", { className: "ir-field" });
+    descField.appendChild(el("label", { className: "ir-field-label" }, prompts.descLabel));
+    var descArea = el("textarea", {
+      className: "ir-textarea",
+      id: "ir-desc",
+      placeholder: "Be as specific as you can...",
+      "aria-label": "Description",
+    });
+    descArea.value = state.description;
+    descArea.addEventListener("input", function () {
+      state.description = descArea.value;
+      var counter = document.getElementById("ir-desc-count");
+      if (counter) {
+        clearChildren(counter);
+        counter.appendChild(document.createTextNode(state.description.length + "/5000"));
+      }
+    });
+    descField.appendChild(descArea);
+    descField.appendChild(el("div", { className: "ir-char-count", id: "ir-desc-count" }, state.description.length + "/5000"));
+    leftCol.appendChild(descField);
+
+    // Expected behavior (conditional)
+    if (typeHasExpected(typeObj)) {
+      var expField = el("div", { className: "ir-field" });
+      expField.appendChild(el("label", { className: "ir-field-label" }, "What should happen instead?"));
+      var expArea = el("textarea", {
+        className: "ir-textarea ir-textarea--short",
+        placeholder: "Describe what you expected...",
+        "aria-label": "Expected behavior",
+      });
+      expArea.value = state.expectedBehavior;
+      expArea.addEventListener("input", function () {
+        state.expectedBehavior = expArea.value;
+      });
+      expField.appendChild(expArea);
+      leftCol.appendChild(expField);
+    }
+
+    grid.appendChild(leftCol);
+
+    // RIGHT COLUMN: Severity + Element inspector
+    var rightCol = el("div");
+
+    // Severity
+    var sevField = el("div", { className: "ir-field" });
+    sevField.appendChild(el("label", { className: "ir-field-label" }, "How bad is it?"));
+    var sevRow = el("div", { className: "ir-severity" });
+    for (var v = 0; v < SEVERITY_OPTIONS.length; v++) {
+      (function (sev) {
+        var isActive = state.severity === sev.id;
+        var pill = el("button", {
+          className: "ir-sev-pill" + (isActive ? " ir-sev-pill--active" : ""),
+          type: "button",
+          title: sev.desc,
+          onClick: function () {
+            state.severity = sev.id;
+            renderBody();
+          },
+        }, sev.label);
+        sevRow.appendChild(pill);
+      })(SEVERITY_OPTIONS[v]);
+    }
+    sevField.appendChild(sevRow);
+    rightCol.appendChild(sevField);
+
     // Element inspector
     var inspectField = el("div", { className: "ir-field" });
     inspectField.appendChild(el("label", { className: "ir-field-label" }, "Point to the problem (optional)"));
@@ -1176,68 +1253,10 @@
     if (state.elementInfo) {
       inspectField.appendChild(buildElementInfoDisplay(state.elementInfo));
     }
-    container.appendChild(inspectField);
+    rightCol.appendChild(inspectField);
 
-    // Description
-    var descField = el("div", { className: "ir-field" });
-    descField.appendChild(el("label", { className: "ir-field-label" }, prompts.descLabel));
-    var descArea = el("textarea", {
-      className: "ir-textarea",
-      id: "ir-desc",
-      placeholder: "Be as specific as you can...",
-      "aria-label": "Description",
-    });
-    descArea.value = state.description;
-    descArea.addEventListener("input", function () {
-      state.description = descArea.value;
-      var counter = document.getElementById("ir-desc-count");
-      if (counter) {
-        clearChildren(counter);
-        counter.appendChild(document.createTextNode(state.description.length + "/5000"));
-      }
-    });
-    descField.appendChild(descArea);
-    descField.appendChild(el("div", { className: "ir-char-count", id: "ir-desc-count" }, state.description.length + "/5000"));
-    container.appendChild(descField);
-
-    // Expected behavior (conditional)
-    if (typeHasExpected(typeObj)) {
-      var expField = el("div", { className: "ir-field" });
-      expField.appendChild(el("label", { className: "ir-field-label" }, "What should happen instead?"));
-      var expArea = el("textarea", {
-        className: "ir-textarea ir-textarea--short",
-        placeholder: "Describe what you expected...",
-        "aria-label": "Expected behavior",
-      });
-      expArea.value = state.expectedBehavior;
-      expArea.addEventListener("input", function () {
-        state.expectedBehavior = expArea.value;
-      });
-      expField.appendChild(expArea);
-      container.appendChild(expField);
-    }
-
-    // Severity
-    var sevField = el("div", { className: "ir-field" });
-    sevField.appendChild(el("label", { className: "ir-field-label" }, "How bad is it?"));
-    var sevRow = el("div", { className: "ir-severity" });
-    for (var v = 0; v < SEVERITY_OPTIONS.length; v++) {
-      (function (sev) {
-        var isActive = state.severity === sev.id;
-        var pill = el("button", {
-          className: "ir-sev-pill" + (isActive ? " ir-sev-pill--active" : ""),
-          type: "button",
-          title: sev.desc,
-          onClick: function () {
-            state.severity = sev.id;
-            renderBody();
-          },
-        }, sev.label);
-        sevRow.appendChild(pill);
-      })(SEVERITY_OPTIONS[v]);
-    }
-    sevField.appendChild(sevRow);
-    container.appendChild(sevField);
+    grid.appendChild(rightCol);
+    container.appendChild(grid);
 
     return container;
   }
