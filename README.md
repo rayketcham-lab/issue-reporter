@@ -20,17 +20,17 @@ That's it. No API keys, no accounts, no payment. Issues get created directly in 
 
 ```bash
 # Python version
-curl -o issue-reporter.py https://raw.githubusercontent.com/rayketcham/issue-reporter/main/issue_reporter.py
+curl -o issue-reporter.py https://raw.githubusercontent.com/rayketcham-lab/issue-reporter/main/issue_reporter.py
 
 # OR Bash version (zero Python needed)
-curl -o issue-reporter.sh https://raw.githubusercontent.com/rayketcham/issue-reporter/main/issue-reporter.sh
+curl -o issue-reporter.sh https://raw.githubusercontent.com/rayketcham-lab/issue-reporter/main/issue-reporter.sh
 chmod +x issue-reporter.sh
 ```
 
 **Option B — pip install:**
 
 ```bash
-pip install git+https://github.com/rayketcham/issue-reporter.git
+pip install git+https://github.com/rayketcham-lab/issue-reporter.git
 # or from local clone
 pip install /path/to/issue-reporter/
 ```
