@@ -32,11 +32,13 @@ That's it. A floating "Report Issue" button appears. Click it, fill out the form
 
 This token can *only* create issues on that one repo. It can't read your code, push commits, or access anything else.
 
+> **Token visibility tradeoff:** In direct mode the token is visible in your page source. For internal tools or personal projects, that's fine — the worst anyone can do is create spam issues you can delete. For public-facing sites, use **Backend Integration** below so the token never leaves your server.
+
 ---
 
-## Backend Integration (if you already have a server)
+## Backend Integration (recommended for public sites)
 
-If you'd rather not put a token in client-side code, add one route to your existing app instead. The widget POSTs JSON to your backend, your backend runs `gh issue create`.
+Token stays on your server. The widget POSTs JSON to a route on your app, your app runs `gh issue create`. No token in the browser, no extra process.
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@main/issue-reporter.js"></script>
