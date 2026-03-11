@@ -24,6 +24,9 @@
 (function () {
   "use strict";
 
+  var VERSION = "2.0.0";
+  var REPO_URL = "https://github.com/rayketcham-lab/issue-reporter";
+
   // Guard against double-init
   if (window.IssueReporter && window.IssueReporter._initialized) {
     return;
@@ -346,6 +349,8 @@
     "}",
     ".ir-footer-next:hover,.ir-footer-submit:hover{background:#3b82f6;}",
     ".ir-footer-next:disabled,.ir-footer-submit:disabled{background:#374151;color:#6b7280;cursor:not-allowed;}",
+    ".ir-footer-version{font-size:10px;color:#4b5563;text-decoration:none;margin-left:auto;padding:2px 0;}",
+    ".ir-footer-version:hover{color:#6b7280;}",
 
     // Status screens (loading, success, error)
     ".ir-status{padding:32px 20px;text-align:center;}",
@@ -1382,6 +1387,14 @@
       }
       footer.appendChild(submitBtn);
     }
+
+    // Version badge — right corner
+    footer.appendChild(el("a", {
+      className: "ir-footer-version",
+      href: REPO_URL,
+      target: "_blank",
+      rel: "noopener noreferrer",
+    }, "v" + VERSION));
 
     return footer;
   }
