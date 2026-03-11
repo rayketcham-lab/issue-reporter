@@ -12,6 +12,16 @@
  *     projectName: "My App"
  *   });
  *
+ * Mode 1b — GitHub Enterprise Server (on-prem):
+ *   IssueReporter.init({
+ *     github: {
+ *       repo: "org/repo",
+ *       token: "github_pat_xxxx",
+ *       apiUrl: "https://your-ghes-host/api/v3"
+ *     },
+ *     projectName: "My App"
+ *   });
+ *
  * Mode 2 — Via your backend (one route):
  *   IssueReporter.init({
  *     endpoint: "/api/report",
@@ -24,7 +34,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "2.1.1";
+  var VERSION = "2.2.0";
   var REPO_URL = "https://github.com/rayketcham-lab/issue-reporter";
 
   // Guard against double-init
@@ -920,6 +930,7 @@
 
   function submitToGitHub(payload) {
     var gh = config.github;
+    var baseUrl = (gh.apiUrl || "https://api.github.com").replace(/\/+$/, "");
     var title = formatIssueTitle(payload.type, payload.description);
     var body = formatIssueBody(payload);
     var labels = getLabelsForType(payload.type, payload.severity);
@@ -929,7 +940,7 @@
       apiPayload.labels = labels;
     }
 
-    return fetch("https://api.github.com/repos/" + gh.repo + "/issues", {
+    return fetch(baseUrl + "/repos/" + gh.repo + "/issues", {
       method: "POST",
       headers: {
         "Authorization": "Bearer " + gh.token,
@@ -951,7 +962,7 @@
         // Labels might not exist — retry without them
         if (result.status === 422 && labels.length > 0 &&
             JSON.stringify(result.data).indexOf("label") !== -1) {
-          return fetch("https://api.github.com/repos/" + gh.repo + "/issues", {
+          return fetch(baseUrl + "/repos/" + gh.repo + "/issues", {
             method: "POST",
             headers: {
               "Authorization": "Bearer " + gh.token,

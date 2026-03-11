@@ -23,7 +23,7 @@ No backend required. No database. No API keys beyond a GitHub token scoped to is
 Add two lines to your page. The widget calls the GitHub API directly.
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.1.1/issue-reporter.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"></script>
 <script>
   IssueReporter.init({
     github: {
@@ -55,7 +55,7 @@ This token can *only* create issues on that one repo. It can't read your code, p
 Token stays on your server. The widget POSTs JSON to a route on your app, your app runs `gh issue create`. No token in the browser, no extra process.
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.1.1/issue-reporter.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"></script>
 <script>
   IssueReporter.init({ endpoint: "/api/report", projectName: "My App" });
 </script>
@@ -271,15 +271,51 @@ For a more complete backend with rate limiting, CORS, labels, and conventional-c
 
 ---
 
+## GitHub Enterprise & Multi-Flavor Support
+
+The widget works with any GitHub-compatible instance. Pass `apiUrl` in the `github` config to target on-prem or alternative deployments:
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"></script>
+<script>
+  IssueReporter.init({
+    github: {
+      repo: "YOUR-ORG/YOUR-REPO",
+      token: "github_pat_xxxxx",
+      apiUrl: "https://your-ghes-host/api/v3"  // GitHub Enterprise Server (on-prem)
+    },
+    projectName: "Your App Name"
+  });
+</script>
+```
+
+| Flavor | `apiUrl` value |
+|--------|----------------|
+| **GitHub.com** (default) | Omit — defaults to `https://api.github.com` |
+| **GitHub Enterprise Server** (on-prem) | `https://<hostname>/api/v3` |
+| **GitHub Enterprise Cloud** (GHEC) | Omit — same as github.com, org-scoped via token |
+| **GitHub AE** | `https://<hostname>/api/v3` |
+
+**Token notes:**
+- Token requirements are the same across all flavors — scope to `repo` (or fine-grained Issues read/write) at minimum
+- On GHES / GitHub AE, generate the PAT from *that instance*, not github.com
+- Fine-grained tokens are supported on GHES 3.10+ and github.com
+
+---
+
 ## Widget Options
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.1.1/issue-reporter.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"></script>
 <script>
   IssueReporter.init({
     // --- Pick one mode ---
-    github: { repo: "owner/repo", token: "github_pat_xxxx" },  // direct
-    // endpoint: "/api/report",                                  // backend
+    github: {
+      repo: "owner/repo",
+      token: "github_pat_xxxx",
+      apiUrl: "https://ghes.example.com/api/v3"  // optional — for GHES/GitHub AE
+    },
+    // endpoint: "/api/report",                    // backend mode (alternative)
 
     // --- Optional ---
     projectName: "My App",
@@ -310,7 +346,7 @@ IssueReporter.destroy(); // Remove the widget entirely
 ### Self-hosting the JS
 
 ```bash
-curl -O https://raw.githubusercontent.com/rayketcham-lab/issue-reporter/v2.1.0/issue-reporter.js
+curl -O https://raw.githubusercontent.com/rayketcham-lab/issue-reporter/v2.2.0/issue-reporter.js
 ```
 
 No build step. No dependencies. One file.
@@ -367,6 +403,8 @@ CLI requires `gh` CLI installed and authenticated.
 
 ```
 Browser widget ──→ GitHub API directly (no backend)
+       or
+Browser widget ──→ GitHub Enterprise API (on-prem, via apiUrl)
        or
 Browser widget ──→ Your backend route ──→ gh issue create ──→ GitHub Issues
        or
