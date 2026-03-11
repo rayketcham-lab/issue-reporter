@@ -1,0 +1,22 @@
+# Config files (may contain project-specific info)
+issue-reporter.json
+issue-reporter.conf
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

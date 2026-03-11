@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "issue-reporter"
+version = "1.0.0"
+description = "AI-powered GitHub issue reporter — turns feedback into structured issues"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{name = "Ray Ketcham"}]
+
+dependencies = []
+
+[project.optional-dependencies]
+ai = ["httpx>=0.25"]
+yaml = ["pyyaml>=6.0"]
+all = ["httpx>=0.25", "pyyaml>=6.0"]
+
+[project.scripts]
+issue-reporter = "issue_reporter:main"
+
+[tool.setuptools]
+py-modules = ["issue_reporter"]
