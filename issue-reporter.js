@@ -24,7 +24,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "2.0.3";
+  var VERSION = "2.0.4";
   var REPO_URL = "https://github.com/rayketcham-lab/issue-reporter";
 
   // Guard against double-init
@@ -630,10 +630,12 @@
 
   function startInspect() {
     if (inspectActive) return;
-    inspectActive = true;
 
-    // Close modal first
+    // Close modal first (before setting inspectActive, since closeModal
+    // calls endInspect() when inspectActive is true)
     closeModal(true); // silent close, no button restore
+
+    inspectActive = true;
 
     // Show banner
     inspectBannerEl = el("div", { className: "ir-inspect-banner ir-widget" }, []);
