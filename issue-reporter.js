@@ -24,7 +24,7 @@
 (function () {
   "use strict";
 
-  var VERSION = "2.0.0";
+  var VERSION = "2.0.2";
   var REPO_URL = "https://github.com/rayketcham-lab/issue-reporter";
 
   // Guard against double-init
