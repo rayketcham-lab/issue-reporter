@@ -1,63 +1,73 @@
 # issue-reporter
 
-Drop a feedback button on any web page. User reports become structured GitHub issues via `gh` CLI.
+Drop a feedback button on any web page. Reports become GitHub issues.
 
-No database, no API keys, no third-party services. Just `gh`.
+No backend required. No database. No API keys beyond a GitHub token scoped to issues.
 
-## Prerequisite
+## Quick Start — Pure HTML (no backend)
 
-Install and authenticate the [GitHub CLI](https://cli.github.com) on whatever machine runs your backend:
-
-```bash
-sudo apt install gh          # Ubuntu/Debian
-gh auth login                # One time — authenticates with your GitHub account
-```
-
----
-
-## Web Widget (add to any web app)
-
-The widget is a single JS file — no framework, no build step. It renders a floating "Report Issue" button that opens a form. On submit, it POSTs JSON to a route on **your** backend, which runs `gh issue create`.
-
-### 1. Add the script tag
+Add two lines to your page. The widget calls the GitHub API directly.
 
 ```html
 <script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@main/issue-reporter.js"></script>
 <script>
   IssueReporter.init({
-    endpoint: "/api/report",       // route on YOUR backend (see step 2)
+    github: {
+      repo: "your-org/your-repo",
+      token: "github_pat_xxxx"
+    },
     projectName: "My App"
   });
 </script>
 ```
 
-A floating button appears in the bottom-right corner. Click → fill out form → submit → GitHub issue created.
+That's it. A floating "Report Issue" button appears. Click it, fill out the form, GitHub issue created.
 
-### 2. Add one route to your backend
+### Creating the token
 
-The widget POSTs JSON. Your backend receives it and runs `gh issue create`. That's the entire integration — one route.
+1. Go to [github.com/settings/tokens?type=beta](https://github.com/settings/tokens?type=beta) (fine-grained tokens)
+2. **Repository access**: select only the repo you want issues in
+3. **Permissions**: Issues → Read and write (nothing else)
+4. Copy the token into your `init()` call
 
-**POST body from the widget:**
+This token can *only* create issues on that one repo. It can't read your code, push commits, or access anything else.
+
+---
+
+## Backend Integration (if you already have a server)
+
+If you'd rather not put a token in client-side code, add one route to your existing app instead. The widget POSTs JSON to your backend, your backend runs `gh issue create`.
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@main/issue-reporter.js"></script>
+<script>
+  IssueReporter.init({ endpoint: "/api/report", projectName: "My App" });
+</script>
+```
+
+Your backend receives:
+
 ```json
 {
   "type": "bug",
   "severity": "high",
   "description": "The save button doesn't work",
-  "context": "Was editing a profile",
+  "context": "Was on the settings page",
   "project_name": "My App",
-  "page_url": "/settings"
+  "page_url": "https://mysite.com/settings"
 }
 ```
 
-**Expected response:**
+And returns:
+
 ```json
 {"success": true, "url": "https://github.com/you/repo/issues/42"}
 ```
 
-Pick your framework:
+The route is ~10 lines in any framework. Pick yours:
 
 <details>
-<summary><strong>FastAPI (Python)</strong></summary>
+<summary><strong>FastAPI</strong></summary>
 
 ```python
 import asyncio
@@ -67,28 +77,27 @@ app = FastAPI()
 
 @app.post("/api/report")
 async def report_issue(body: dict):
-    description = body.get("description", "").strip()
-    if not description:
+    desc = (body.get("description") or "").strip()
+    if not desc:
         return {"success": False, "error": "description is required"}
 
-    issue_type = body.get("type", "bug")
-    severity = body.get("severity", "medium")
-    title = f"{issue_type}: {description[:60]}"
-    issue_body = f"## Summary\n\n{description}\n\n- **Severity:** {severity}"
+    title = f"{body.get('type', 'bug')}: {desc[:60]}"
+    issue_body = f"## Summary\n\n{desc}\n\n- **Severity:** {body.get('severity', 'medium')}"
 
     proc = await asyncio.create_subprocess_exec(
         "gh", "issue", "create", "--title", title, "--body", issue_body,
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
     )
     stdout, _ = await proc.communicate()
-    if proc.returncode == 0:
-        return {"success": True, "url": stdout.decode().strip()}
+    url = stdout.decode().strip() if proc.returncode == 0 else None
+    if url:
+        return {"success": True, "url": url}
     return {"success": False, "error": "gh issue create failed"}
 ```
 </details>
 
 <details>
-<summary><strong>Flask (Python)</strong></summary>
+<summary><strong>Flask</strong></summary>
 
 ```python
 import subprocess
@@ -99,14 +108,12 @@ app = Flask(__name__)
 @app.post("/api/report")
 def report_issue():
     data = request.get_json()
-    description = (data.get("description") or "").strip()
-    if not description:
+    desc = (data.get("description") or "").strip()
+    if not desc:
         return jsonify(success=False, error="description is required"), 400
 
-    issue_type = data.get("type", "bug")
-    severity = data.get("severity", "medium")
-    title = f"{issue_type}: {description[:60]}"
-    body = f"## Summary\n\n{description}\n\n- **Severity:** {severity}"
+    title = f"{data.get('type', 'bug')}: {desc[:60]}"
+    body = f"## Summary\n\n{desc}\n\n- **Severity:** {data.get('severity', 'medium')}"
 
     result = subprocess.run(
         ["gh", "issue", "create", "--title", title, "--body", body],
@@ -119,20 +126,19 @@ def report_issue():
 </details>
 
 <details>
-<summary><strong>Express (Node.js)</strong></summary>
+<summary><strong>Express</strong></summary>
 
 ```js
 const { execFile } = require("child_process");
-const express = require("express");
-const app = express();
-app.use(express.json());
+const app = require("express")();
+app.use(require("express").json());
 
 app.post("/api/report", (req, res) => {
-  const { description, type = "bug", severity = "medium" } = req.body;
-  if (!description) return res.json({ success: false, error: "description is required" });
+  const desc = (req.body.description || "").trim();
+  if (!desc) return res.json({ success: false, error: "description is required" });
 
-  const title = `${type}: ${description.slice(0, 60)}`;
-  const body = `## Summary\n\n${description}\n\n- **Severity:** ${severity}`;
+  const title = `${req.body.type || "bug"}: ${desc.slice(0, 60)}`;
+  const body = `## Summary\n\n${desc}\n\n- **Severity:** ${req.body.severity || "medium"}`;
 
   execFile("gh", ["issue", "create", "--title", title, "--body", body], (err, stdout) => {
     if (err) return res.json({ success: false, error: "gh issue create failed" });
@@ -146,7 +152,6 @@ app.post("/api/report", (req, res) => {
 <summary><strong>Django</strong></summary>
 
 ```python
-# views.py
 import json, subprocess
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -154,14 +159,12 @@ from django.views.decorators.csrf import csrf_exempt
 @csrf_exempt
 def report_issue(request):
     data = json.loads(request.body)
-    description = (data.get("description") or "").strip()
-    if not description:
+    desc = (data.get("description") or "").strip()
+    if not desc:
         return JsonResponse({"success": False, "error": "description is required"}, status=400)
 
-    issue_type = data.get("type", "bug")
-    severity = data.get("severity", "medium")
-    title = f"{issue_type}: {description[:60]}"
-    body = f"## Summary\n\n{description}\n\n- **Severity:** {severity}"
+    title = f"{data.get('type', 'bug')}: {desc[:60]}"
+    body = f"## Summary\n\n{desc}\n\n- **Severity:** {data.get('severity', 'medium')}"
 
     result = subprocess.run(
         ["gh", "issue", "create", "--title", title, "--body", body],
@@ -170,24 +173,27 @@ def report_issue(request):
     if result.returncode == 0:
         return JsonResponse({"success": True, "url": result.stdout.strip()})
     return JsonResponse({"success": False, "error": "gh issue create failed"}, status=500)
-
-# urls.py
-urlpatterns = [path("api/report", views.report_issue)]
 ```
 </details>
 
-That's it. The core logic is always the same: receive JSON, run `gh issue create`, return the URL.
+Backend mode requires `gh` CLI installed and authenticated on your server (`sudo apt install gh && gh auth login`).
 
-The examples above are minimal. See `server.py` in this repo for a more complete implementation with rate limiting, CORS, label mapping, and conventional-commit title prefixes.
+For a more complete backend with rate limiting, CORS, labels, and conventional-commit prefixes, see `server.py` in this repo.
 
-### Widget options
+---
+
+## Widget Options
 
 ```html
 <script>
   IssueReporter.init({
-    endpoint: "/api/report",              // required — your backend route
-    projectName: "My App",                // optional — included in issue metadata
-    position: "bottom-right",             // "bottom-right" or "bottom-left"
+    // --- Pick one mode ---
+    github: { repo: "owner/repo", token: "github_pat_xxxx" },  // direct
+    // endpoint: "/api/report",                                  // backend
+
+    // --- Optional ---
+    projectName: "My App",
+    position: "bottom-right",             // or "bottom-left"
     buttonText: "Report Issue",
     issueTypes: [
       { id: "bug", label: "Bug Report" },
@@ -196,7 +202,7 @@ The examples above are minimal. See `server.py` in this repo for a more complete
       { id: "performance", label: "Performance" },
       { id: "other", label: "Other" }
     ],
-    token: "your-secret-token"            // sent as Authorization: Bearer header
+    token: "your-secret-token"            // backend mode only — Bearer header
   });
 </script>
 ```
@@ -219,36 +225,9 @@ No build step. No dependencies. One file.
 
 ---
 
-## Standalone Server (no existing backend)
-
-If you're running a static site or don't have a backend, `server.py` is a self-contained bridge between the widget and `gh`. Stdlib only — no pip install needed.
-
-```bash
-python server.py --repo /path/to/your-project --port 8787
-```
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--repo` | `.` | Git repo directory (where `gh` creates issues) |
-| `--port` | `8787` | Server port |
-| `--allowed-origins` | `*` | CORS origins (lock to your domain in production) |
-| `--token` | *(none)* | Optional Bearer token clients must send |
-
-Then point the widget at it:
-
-```html
-<script>
-  IssueReporter.init({
-    endpoint: "https://your-server.com:8787/api/report"
-  });
-</script>
-```
-
----
-
 ## CLI Usage
 
-Create issues directly from the terminal — no web widget needed.
+Create issues from the terminal — no widget needed.
 
 ### Bash
 
@@ -288,79 +267,19 @@ print(url)  # https://github.com/you/repo/issues/42
 pip install git+https://github.com/rayketcham-lab/issue-reporter.git
 ```
 
----
-
-## Integration Examples
-
-### CI — auto-report failures
-
-```yaml
-- name: Report failures
-  if: failure()
-  run: echo "CI failed on ${{ github.ref }}" | ./issue-reporter.sh -t bug -s high
-```
-
-### Python test suite
-
-```python
-from issue_reporter import IssueReporter
-
-reporter = IssueReporter.from_config("issue-reporter.json")
-
-def pytest_sessionfinish(session, exitstatus):
-    if exitstatus != 0:
-        reporter.report(f"{session.testsfailed} tests failed", issue_type="bug", severity="high")
-```
-
-### Git hook
-
-```bash
-# .git/hooks/post-commit
-#!/bin/bash
-read -rp "Report an issue? [y/N]: " answer
-[[ "${answer,,}" == "y" ]] && /path/to/issue-reporter.sh
-```
+CLI requires `gh` CLI installed and authenticated.
 
 ---
-
-## Configuration Files
-
-Optional config files customize issue types and labels.
-
-**JSON** — copy `issue-reporter.example.json` to `issue-reporter.json`:
-
-```json
-{
-  "project_name": "My App",
-  "issue_types": [
-    {"id": "bug", "label": "Bug", "description": "Something broken"},
-    {"id": "feature_request", "label": "Feature", "description": "New idea"}
-  ],
-  "label_map": {
-    "bug": ["bug"],
-    "feature_request": ["enhancement"]
-  }
-}
-```
-
-**Bash** — copy `issue-reporter.example.conf` to `issue-reporter.conf`.
 
 ## How It Works
 
 ```
-Browser widget / CLI / CI
-         |
-         v
-    Your backend         (or standalone server.py)
-         |
-         v
-    gh issue create
-         |
-         v
-    GitHub Issues
+Browser widget ──→ GitHub API directly (no backend)
+       or
+Browser widget ──→ Your backend route ──→ gh issue create ──→ GitHub Issues
+       or
+CLI (bash/python) ──→ gh issue create ──→ GitHub Issues
 ```
-
-The only external dependency is `gh` CLI (free, uses your existing GitHub auth). No database, no API keys, no third-party accounts.
 
 ## License
 

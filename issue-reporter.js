@@ -2,27 +2,20 @@
  * issue-reporter.js — Embeddable GitHub issue reporter widget
  *
  * Drop a single <script> tag on any page to add a floating feedback button
- * that creates structured GitHub issues via a lightweight backend server.
+ * that creates structured GitHub issues.
  *
  * No dependencies. No framework. No build step.
  *
- * Usage (minimal):
- *   <script src="issue-reporter.js"></script>
- *   <script>
- *     IssueReporter.init({ endpoint: "https://your-server.com/api/report" });
- *   </script>
- *
- * Usage (all options):
+ * Mode 1 — Direct to GitHub (no backend needed):
  *   IssueReporter.init({
- *     endpoint: "https://your-server.com/api/report",
- *     projectName: "My App",
- *     position: "bottom-right",       // "bottom-right" or "bottom-left"
- *     buttonText: "Report Issue",
- *     issueTypes: [
- *       { id: "bug", label: "Bug Report" },
- *       { id: "feature_request", label: "Feature Request" },
- *     ],
- *     token: "optional-auth-token",   // sent as Authorization: Bearer header
+ *     github: { repo: "owner/repo", token: "github_pat_xxxx" },
+ *     projectName: "My App"
+ *   });
+ *
+ * Mode 2 — Via your backend (one route):
+ *   IssueReporter.init({
+ *     endpoint: "/api/report",
+ *     projectName: "My App"
  *   });
  *
  * @license MIT
@@ -42,6 +35,7 @@
 
   var DEFAULTS = {
     endpoint: "",
+    github: null, // { repo: "owner/repo", token: "github_pat_xxxx" }
     projectName: "",
     position: "bottom-right",
     buttonText: "Report Issue",
@@ -54,6 +48,26 @@
       { id: "other", label: "Other" },
     ],
     token: "",
+  };
+
+  // Map issue types to conventional-commit prefixes
+  var PREFIX_MAP = {
+    bug: "fix",
+    feature_request: "feat",
+    data_issue: "data",
+    ui_bug: "fix",
+    performance: "perf",
+    other: "issue",
+  };
+
+  // Map issue types to GitHub labels
+  var LABEL_MAP = {
+    bug: ["bug"],
+    feature_request: ["enhancement"],
+    data_issue: ["bug", "data"],
+    ui_bug: ["bug", "ui"],
+    performance: ["performance"],
+    other: [],
   };
 
   var config = {};
@@ -236,6 +250,139 @@
     while (node.firstChild) {
       node.removeChild(node.firstChild);
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Issue formatting (used in direct GitHub mode)
+  // -------------------------------------------------------------------------
+
+  function formatIssueTitle(issueType, description) {
+    var prefix = PREFIX_MAP[issueType] || "issue";
+    var titleText = description.substring(0, 60).split("\n")[0];
+    if (description.length > 60) {
+      var lastSpace = titleText.lastIndexOf(" ");
+      if (lastSpace > 20) {
+        titleText = titleText.substring(0, lastSpace);
+      }
+      titleText += "...";
+    }
+    return prefix + ": " + titleText;
+  }
+
+  function formatIssueBody(payload) {
+    var parts = ["## Summary\n\n" + payload.description];
+
+    if (payload.context) {
+      parts.push("\n## Context\n\n" + payload.context);
+    }
+
+    var meta = [];
+    meta.push("- **Type:** " + payload.type);
+    meta.push("- **Severity:** " + payload.severity);
+    if (payload.project_name) {
+      meta.push("- **Project:** " + payload.project_name);
+    }
+    if (payload.page_url) {
+      meta.push("- **Page:** " + payload.page_url);
+    }
+    parts.push("\n## Metadata\n\n" + meta.join("\n"));
+
+    var now = new Date();
+    var ts = now.toISOString().replace("T", " ").substring(0, 16) + " UTC";
+    parts.push("\n---\n*Reported via [issue-reporter](https://github.com/rayketcham-lab/issue-reporter) on " + ts + "*");
+
+    return parts.join("\n");
+  }
+
+  function getLabelsForType(issueType, severity) {
+    var labels = (LABEL_MAP[issueType] || []).slice();
+    if (severity === "critical") {
+      labels.push("critical");
+    }
+    return labels;
+  }
+
+  // -------------------------------------------------------------------------
+  // Submission — two modes
+  // -------------------------------------------------------------------------
+
+  function submitToGitHub(payload) {
+    var gh = config.github;
+    var title = formatIssueTitle(payload.type, payload.description);
+    var body = formatIssueBody(payload);
+    var labels = getLabelsForType(payload.type, payload.severity);
+
+    var apiPayload = { title: title, body: body };
+    if (labels.length > 0) {
+      apiPayload.labels = labels;
+    }
+
+    return fetch("https://api.github.com/repos/" + gh.repo + "/issues", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + gh.token,
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(apiPayload),
+    })
+      .then(function (res) {
+        return res.json().then(function (data) {
+          return { ok: res.ok, status: res.status, data: data };
+        });
+      })
+      .then(function (result) {
+        if (result.ok) {
+          return { success: true, url: result.data.html_url };
+        }
+
+        // Labels might not exist — retry without them
+        if (result.status === 422 && labels.length > 0 &&
+            JSON.stringify(result.data).indexOf("label") !== -1) {
+          return fetch("https://api.github.com/repos/" + gh.repo + "/issues", {
+            method: "POST",
+            headers: {
+              "Authorization": "Bearer " + gh.token,
+              "Accept": "application/vnd.github+json",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ title: title, body: body }),
+          })
+            .then(function (res2) { return res2.json(); })
+            .then(function (data2) {
+              if (data2.html_url) {
+                return { success: true, url: data2.html_url };
+              }
+              return { success: false, error: data2.message || "GitHub API error" };
+            });
+        }
+
+        return { success: false, error: result.data.message || "GitHub API error (HTTP " + result.status + ")" };
+      });
+  }
+
+  function submitToEndpoint(payload) {
+    var headers = { "Content-Type": "application/json" };
+    if (config.token) {
+      headers["Authorization"] = "Bearer " + config.token;
+    }
+
+    return fetch(config.endpoint, {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify(payload),
+    })
+      .then(function (res) {
+        return res.json().then(function (data) {
+          return { ok: res.ok, data: data };
+        });
+      })
+      .then(function (result) {
+        if (result.ok && result.data.success) {
+          return { success: true, url: result.data.url };
+        }
+        return { success: false, error: result.data.error || "Server returned an error." };
+      });
   }
 
   // -------------------------------------------------------------------------
@@ -438,11 +585,6 @@
       return;
     }
 
-    if (!config.endpoint) {
-      showError("No endpoint configured. Call IssueReporter.init({ endpoint: '...' }).");
-      return;
-    }
-
     var payload = {
       type: typeEl.value,
       severity: sevEl ? sevEl.value : "medium",
@@ -454,26 +596,14 @@
 
     showLoading();
 
-    var headers = { "Content-Type": "application/json" };
-    if (config.token) {
-      headers["Authorization"] = "Bearer " + config.token;
-    }
+    var submitFn = config.github ? submitToGitHub : submitToEndpoint;
 
-    fetch(config.endpoint, {
-      method: "POST",
-      headers: headers,
-      body: JSON.stringify(payload),
-    })
-      .then(function (res) {
-        return res.json().then(function (data) {
-          return { ok: res.ok, data: data };
-        });
-      })
+    submitFn(payload)
       .then(function (result) {
-        if (result.ok && result.data.success) {
-          showSuccess(result.data.url);
+        if (result.success) {
+          showSuccess(result.url);
         } else {
-          showError(result.data.error || "Server returned an error.");
+          showError(result.error);
         }
       })
       .catch(function (err) {
@@ -554,13 +684,17 @@
 
     /**
      * Initialize the issue reporter widget.
-     * @param {Object} options - Configuration options
-     * @param {string} options.endpoint - Backend URL to POST reports to (required)
+     *
+     * @param {Object} options
+     * @param {Object} [options.github] - Direct GitHub mode (no backend needed)
+     * @param {string} options.github.repo - "owner/repo" (e.g. "acme/my-app")
+     * @param {string} options.github.token - Fine-grained PAT with Issues read/write
+     * @param {string} [options.endpoint] - Backend URL to POST reports to
      * @param {string} [options.projectName] - Project name shown in modal header
-     * @param {string} [options.position="bottom-right"] - Button position: "bottom-right" or "bottom-left"
+     * @param {string} [options.position="bottom-right"] - "bottom-right" or "bottom-left"
      * @param {string} [options.buttonText="Report Issue"] - Floating button text
-     * @param {Array}  [options.issueTypes] - Array of {id, label} objects for the type dropdown
-     * @param {string} [options.token] - Auth token sent as Bearer header
+     * @param {Array}  [options.issueTypes] - Array of {id, label} for the type dropdown
+     * @param {string} [options.token] - Auth token for endpoint mode (Bearer header)
      */
     init: function (options) {
       if (this._initialized) {
@@ -570,6 +704,7 @@
 
       options = options || {};
       config = {
+        github: options.github || null,
         endpoint: options.endpoint || DEFAULTS.endpoint,
         projectName: options.projectName || DEFAULTS.projectName,
         position: options.position || DEFAULTS.position,
@@ -578,10 +713,19 @@
         token: options.token || DEFAULTS.token,
       };
 
-      if (!config.endpoint) {
+      // Validate: need either github config or endpoint
+      if (config.github) {
+        if (!config.github.repo || !config.github.token) {
+          console.error(
+            "IssueReporter: github mode requires both repo and token. " +
+            'Example: IssueReporter.init({ github: { repo: "owner/repo", token: "github_pat_xxxx" } }).'
+          );
+          return;
+        }
+      } else if (!config.endpoint) {
         console.error(
-          "IssueReporter: endpoint is required. " +
-          'Call IssueReporter.init({ endpoint: "https://..." }).'
+          "IssueReporter: provide either github (direct mode) or endpoint (backend mode). " +
+          "See https://github.com/rayketcham-lab/issue-reporter for setup."
         );
         return;
       }
