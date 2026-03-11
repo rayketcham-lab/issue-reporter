@@ -83,6 +83,13 @@ def create_issue(
     project_name: str,
     page_url: str,
     repo_dir: str,
+    expected_behavior: str = "",
+    page_title: str = "",
+    page_type: str = "",
+    section: str = "",
+    element_text: str = "",
+    console_errors: str = "",
+    last_api_calls: str = "",
 ) -> str:
     """Create a GitHub issue. Returns the issue URL. Raises on failure."""
 
@@ -94,20 +101,41 @@ def create_issue(
         title_text = title_text.rsplit(" ", 1)[0] + "..."
     title = f"{prefix}: {title_text}"
 
-    # Build body
+    # Build body — matches the format used by the JS widget's direct GitHub mode
     parts = [f"## Summary\n\n{description}"]
 
-    if context:
-        parts.append(f"\n## Context\n\n{context}")
+    # Context section
+    context_lines: list[str] = []
+    if page_url:
+        context_lines.append(f"- **Page:** {page_url}")
+    if page_title:
+        context_lines.append(f"- **Page Title:** {page_title}")
+    if section:
+        context_lines.append(f"- **Section:** {section}")
+    if element_text:
+        context_lines.append(f"- **Element:** {element_text}")
+    if context_lines:
+        parts.append("\n## Context\n\n" + "\n".join(context_lines))
 
+    # Expected behavior
+    if expected_behavior:
+        parts.append(f"\n## Expected Behavior\n\n{expected_behavior}")
+
+    # Console errors
+    if console_errors:
+        parts.append(f"\n## Console Errors\n\n```\n{console_errors}\n```")
+
+    # Recent API calls
+    if last_api_calls:
+        parts.append(f"\n## Recent API Calls\n\n```\n{last_api_calls}\n```")
+
+    # Metadata
     meta_lines = [
         f"- **Type:** {issue_type}",
         f"- **Severity:** {severity}",
     ]
     if project_name:
         meta_lines.append(f"- **Project:** {project_name}")
-    if page_url:
-        meta_lines.append(f"- **Page:** {page_url}")
 
     parts.append("\n## Metadata\n\n" + "\n".join(meta_lines))
 
@@ -223,6 +251,13 @@ class ReportHandler(BaseHTTPRequestHandler):
         context = (data.get("context") or "").strip()
         project_name = (data.get("project_name") or "").strip()
         page_url = (data.get("page_url") or "").strip()
+        expected_behavior = (data.get("expected_behavior") or "").strip()
+        page_title = (data.get("page_title") or "").strip()
+        page_type = (data.get("page_type") or "").strip()
+        section = (data.get("section") or "").strip()
+        element_text = (data.get("element_text") or "").strip()
+        console_errors = (data.get("console_errors") or "").strip()
+        last_api_calls = (data.get("last_api_calls") or "").strip()
 
         # Validate severity
         if severity not in ("low", "medium", "high", "critical"):
@@ -238,6 +273,13 @@ class ReportHandler(BaseHTTPRequestHandler):
                 project_name=project_name,
                 page_url=page_url,
                 repo_dir=self.repo_dir,
+                expected_behavior=expected_behavior,
+                page_title=page_title,
+                page_type=page_type,
+                section=section,
+                element_text=element_text,
+                console_errors=console_errors,
+                last_api_calls=last_api_calls,
             )
             self._send_json(200, {"success": True, "url": url})
             self.log_message("Created issue: %s", url)

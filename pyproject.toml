@@ -1,11 +1,11 @@
 [build-system]
 requires = ["setuptools>=68.0"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "issue-reporter"
-version = "1.0.0"
-description = "GitHub issue reporter — turns plain feedback into structured issues"
+version = "2.0.0"
+description = "Drop a feedback button on any web page. Reports become GitHub issues. No dependencies."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
