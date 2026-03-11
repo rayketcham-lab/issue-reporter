@@ -7,8 +7,8 @@ Turn plain feedback into structured GitHub issues. One file, one dependency.
 **Just one thing:** [GitHub CLI](https://cli.github.com) (free)
 
 ```bash
-brew install gh       # macOS
 sudo apt install gh   # Ubuntu/Debian
+# See https://github.com/cli/cli#installation for other platforms
 gh auth login         # authenticate (one time)
 ```
 
@@ -74,33 +74,16 @@ url = reporter.report("The save button doesn't work", issue_type="bug")
 print(url)  # https://github.com/you/repo/issues/42
 ```
 
-## Optional: AI formatting (free with Ollama)
+## Optional: AI formatting
 
-Without AI, issues get clean deterministic formatting. With AI, you get smarter titles and better-structured bodies. **Both options below are free:**
-
-### Ollama (local, free, private)
-
-```bash
-# Install Ollama (one time)
-brew install ollama         # or curl -fsSL https://ollama.com/install.sh | sh
-ollama pull llama3          # download a model (~4GB)
-
-# Use it
-./issue-reporter.sh --ollama llama3 "Button doesn't save"
-python issue_reporter.py --ollama llama3 "Button doesn't save"
-
-# Or set it as default
-export OLLAMA_MODEL=llama3
-```
-
-### Anthropic Claude (paid API, best quality)
+Without AI, issues get clean deterministic formatting. With AI, you get smarter titles and better-structured bodies.
 
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
 # Now issue-reporter auto-uses Claude for formatting
 ```
 
-**Priority order:** Ollama (free) → Anthropic (paid) → fallback (no AI). It always works.
+**Priority:** Claude API (if key set) → deterministic fallback. It always works without AI.
 
 ## Configuration
 
@@ -110,7 +93,6 @@ Optional. Copy `issue-reporter.example.json` → `issue-reporter.json`:
 {
   "project_name": "My App",
   "project_description": "A web app for widgets",
-  "ollama_model": "llama3",
   "issue_types": [
     {"id": "bug", "label": "Bug", "description": "Something broken"},
     {"id": "feature_request", "label": "Feature", "description": "New idea"}
@@ -171,7 +153,7 @@ def handle_feedback(description: str, issue_type: str = "bug"):
 ## How it works
 
 ```
-User feedback → [Ollama/Claude/fallback] → Structured issue → gh issue create → GitHub
+User feedback → [Claude/fallback] → Structured issue → gh issue create → GitHub
 ```
 
 1. You describe the problem in plain text

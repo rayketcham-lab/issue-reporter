@@ -22,8 +22,7 @@ Requirements:
     - gh CLI (authenticated): https://cli.github.com  (FREE)
     - Python 3.10+
 
-Optional AI backends (for smarter formatting — works fine without any):
-    - Ollama (FREE, local): brew install ollama && ollama pull llama3
+Optional AI backend (for smarter formatting — works fine without):
     - Anthropic Claude: pip install httpx, set ANTHROPIC_API_KEY
 """
 
@@ -87,18 +86,14 @@ class IssueReporter:
         "documentation", "critical",
     }))
 
-    # AI configuration (all optional — works fine without any AI)
+    # AI configuration (optional — works fine without any AI)
     system_prompt: str = ""
     api_key: str = ""  # Anthropic API key (optional)
     model: str = "claude-sonnet-4-20250514"
-    ollama_model: str = ""  # e.g. "llama3", "mistral" (free, local)
-    ollama_url: str = "http://localhost:11434"  # Ollama server URL
 
     def __post_init__(self) -> None:
         if not self.api_key:
             self.api_key = os.getenv("ANTHROPIC_API_KEY", "")
-        if not self.ollama_model:
-            self.ollama_model = os.getenv("OLLAMA_MODEL", "")
         if not self.system_prompt:
             self.system_prompt = DEFAULT_SYSTEM_PROMPT.format(
                 valid_labels=", ".join(sorted(self.valid_labels))
@@ -141,8 +136,6 @@ class IssueReporter:
             system_prompt=cfg.get("system_prompt", ""),
             api_key=cfg.get("api_key", ""),
             model=cfg.get("model", "claude-sonnet-4-20250514"),
-            ollama_model=cfg.get("ollama_model", ""),
-            ollama_url=cfg.get("ollama_url", "http://localhost:11434"),
         )
 
     # ------------------------------------------------------------------
@@ -170,64 +163,14 @@ class IssueReporter:
     ) -> dict[str, Any]:
         """Structure user feedback into an issue.
 
-        Tries backends in order: Ollama (free/local) → Anthropic → fallback.
+        Tries Claude API first (if configured), then falls back to deterministic formatting.
         """
-        # Try Ollama first (free, local)
-        if self.ollama_model:
-            result = self._ollama_structure(description, issue_type, severity, context)
-            if result:
-                return result
-        # Try Anthropic (paid API)
         if self.api_key:
             result = self._ai_structure(description, issue_type, severity, context)
             if result:
                 return result
         # Deterministic fallback (always works)
         return self._fallback_structure(description, issue_type, severity, context)
-
-    def _ollama_structure(
-        self,
-        description: str,
-        issue_type: str,
-        severity: str,
-        context: dict[str, str],
-    ) -> dict[str, Any] | None:
-        """Use local Ollama to structure the issue (free, no API key). Returns None on failure."""
-        import urllib.request
-        import urllib.error
-
-        context_lines = "\n".join(f"**{k}:** {v}" for k, v in context.items()) if context else "None"
-        user_msg = (
-            f"Structure this user feedback into a GitHub issue:\n\n"
-            f"**Issue Type:** {issue_type}\n"
-            f"**Severity:** {severity}\n"
-            f"{context_lines}\n\n"
-            f"**User Description:**\n{description}"
-        )
-
-        payload = json.dumps({
-            "model": self.ollama_model,
-            "prompt": f"{self.system_prompt}\n\n{user_msg}",
-            "stream": False,
-            "format": "json",
-        }).encode()
-
-        req = urllib.request.Request(
-            f"{self.ollama_url}/api/generate",
-            data=payload,
-            headers={"Content-Type": "application/json"},
-        )
-
-        try:
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                data = json.loads(resp.read())
-            text = data.get("response", "").strip()
-            if text:
-                parsed = json.loads(text)
-                return self._validate_ai_response(parsed, issue_type)
-        except (urllib.error.URLError, json.JSONDecodeError, Exception) as exc:
-            print(f"Ollama structuring failed, trying next backend: {exc}", file=sys.stderr)
-        return None
 
     def _ai_structure(
         self,
@@ -473,8 +416,7 @@ def main() -> None:
         epilog="Examples:\n"
                "  %(prog)s                                    # Interactive mode\n"
                '  %(prog)s --type bug "Login is broken"       # Quick CLI mode\n'
-               '  echo "Slow query" | %(prog)s --type perf    # Pipe mode\n'
-               '  %(prog)s --ollama llama3 "Button broken"    # Free local AI\n',
+               '  echo "Slow query" | %(prog)s --type perf    # Pipe mode\n',
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("description", nargs="?", help="Issue description (or omit for interactive)")
@@ -484,7 +426,6 @@ def main() -> None:
     parser.add_argument("--repo", "-r", default=".", help="Repository directory")
     parser.add_argument("--context", "-x", nargs=2, action="append", metavar=("KEY", "VALUE"),
                         help="Add context (repeatable): --context file src/app.py")
-    parser.add_argument("--ollama", metavar="MODEL", help="Use local Ollama model (free): --ollama llama3")
     parser.add_argument("--dry-run", action="store_true", help="Show what would be created without creating")
 
     args = parser.parse_args()
@@ -498,8 +439,6 @@ def main() -> None:
 
     if args.repo != ".":
         reporter.repo_dir = args.repo
-    if args.ollama:
-        reporter.ollama_model = args.ollama
 
     # Get description from args, stdin, or interactive
     description = args.description

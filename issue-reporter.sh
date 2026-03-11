@@ -8,16 +8,13 @@ set -euo pipefail
 #   ./issue-reporter.sh "Login page is broken"       # Quick mode (defaults to bug)
 #   ./issue-reporter.sh -t feature "Add dark mode"   # Specify type
 #   echo "Error desc" | ./issue-reporter.sh -t bug   # Pipe mode
-#   ./issue-reporter.sh --ollama llama3 "Bug desc"   # Free local AI
 #
-# AI backends (all optional — works fine without any):
-#   Ollama (FREE, local): brew install ollama && ollama pull llama3
+# Optional AI backend (for smarter formatting — works fine without):
 #   Anthropic Claude: Set ANTHROPIC_API_KEY env var
 #
 # Config: Place issue-reporter.conf in the same directory to customize:
 #   PROJECT_NAME="My App"
 #   REPO_DIR="/path/to/repo"
-#   OLLAMA_MODEL="llama3"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="."
@@ -25,8 +22,6 @@ PROJECT_NAME=""
 ISSUE_TYPE="bug"
 SEVERITY="medium"
 DRY_RUN=false
-OLLAMA_MODEL="${OLLAMA_MODEL:-}"
-OLLAMA_URL="${OLLAMA_URL:-http://localhost:11434}"
 
 # Load config if present
 CONF_FILE="${SCRIPT_DIR}/issue-reporter.conf"
@@ -65,51 +60,6 @@ labels_for_type() {
         performance|perf) echo "performance" ;;
         *)                echo "bug" ;;
     esac
-}
-
-# ---------------------------------------------------------------------------
-# Ollama structuring (FREE, local — needs curl + ollama running)
-# ---------------------------------------------------------------------------
-
-ollama_structure() {
-    local description="$1"
-    local issue_type="$2"
-    local severity="$3"
-
-    [[ -z "$OLLAMA_MODEL" ]] && return 1
-    command -v curl &>/dev/null || return 1
-
-    local system_prompt="You are a QA assistant. Take raw user feedback and structure it into a clean, actionable GitHub issue.
-${PROJECT_NAME:+The project is called \"${PROJECT_NAME}\".}
-
-Respond with ONLY valid JSON with these fields:
-- \"title\": concise issue title under 70 chars, prefixed (e.g., \"fix: ...\", \"feat: ...\")
-- \"body\": GitHub issue body in markdown with ## Summary, ## Steps to Reproduce, ## Expected Behavior sections
-- \"labels\": array of 1-3 labels from: bug, enhancement, data, ui, performance, critical"
-
-    local user_msg="Issue Type: ${issue_type}, Severity: ${severity}
-
-${description}"
-
-    local payload
-    payload=$(jq -n \
-        --arg model "$OLLAMA_MODEL" \
-        --arg prompt "${system_prompt}
-
-${user_msg}" \
-        '{model: $model, prompt: $prompt, stream: false, format: "json"}')
-
-    local response
-    response=$(curl -s --max-time 30 \
-        -H "content-type: application/json" \
-        -d "$payload" \
-        "${OLLAMA_URL}/api/generate" 2>/dev/null) || return 1
-
-    local text
-    text=$(echo "$response" | jq -r '.response // empty' 2>/dev/null) || return 1
-    [[ -z "$text" ]] && return 1
-    echo "$text" | jq -e '.title and .body' &>/dev/null || return 1
-    echo "$text"
 }
 
 # ---------------------------------------------------------------------------
@@ -296,13 +246,9 @@ interactive() {
 do_report() {
     local description="$1"
 
-    # Try AI backends in order: Ollama (free) → Anthropic (paid) → fallback
+    # Try Claude API first (if configured), then fall back to deterministic formatting
     local ai_result=""
-    if [[ -n "$OLLAMA_MODEL" ]] && ai_result=$(ollama_structure "$description" "$ISSUE_TYPE" "$SEVERITY" 2>/dev/null); then
-        _TITLE=$(echo "$ai_result" | jq -r '.title')
-        _BODY=$(echo "$ai_result" | jq -r '.body')
-        _LABELS=$(echo "$ai_result" | jq -r '.labels | join(",")')
-    elif ai_result=$(ai_structure "$description" "$ISSUE_TYPE" "$SEVERITY" 2>/dev/null); then
+    if ai_result=$(ai_structure "$description" "$ISSUE_TYPE" "$SEVERITY" 2>/dev/null); then
         _TITLE=$(echo "$ai_result" | jq -r '.title')
         _BODY=$(echo "$ai_result" | jq -r '.body')
         _LABELS=$(echo "$ai_result" | jq -r '.labels | join(",")')
@@ -335,13 +281,12 @@ usage() {
     cat <<USAGE
 Usage: $(basename "$0") [options] [description]
 
-AI-powered GitHub issue reporter. Creates structured issues from feedback.
+GitHub issue reporter. Creates structured issues from plain feedback.
 
 Options:
   -t, --type TYPE       Issue type: bug, feature, data, ui_bug, perf, other (default: bug)
   -s, --severity SEV    Severity: low, medium, high, critical (default: medium)
   -r, --repo DIR        Repository directory (default: .)
-  -o, --ollama MODEL    Use local Ollama model (FREE): --ollama llama3
   -n, --dry-run         Show what would be created without creating
   -h, --help            Show this help
 
@@ -349,12 +294,10 @@ Examples:
   $(basename "$0")                                   # Interactive mode
   $(basename "$0") "Login button is broken"          # Quick bug report
   $(basename "$0") -t feature "Add dark mode"        # Feature request
-  $(basename "$0") --ollama llama3 "Save is broken"  # Free local AI
   echo "Error details" | $(basename "$0") -t bug     # Pipe mode
 
 Environment:
-  OLLAMA_MODEL          Free local AI model (e.g., llama3, mistral)
-  ANTHROPIC_API_KEY     Optional paid AI for fancier formatting
+  ANTHROPIC_API_KEY     Optional — enables AI-powered issue formatting via Claude
 USAGE
     exit 0
 }
@@ -366,7 +309,6 @@ while [[ $# -gt 0 ]]; do
         -t|--type) ISSUE_TYPE="$2"; shift 2 ;;
         -s|--severity) SEVERITY="$2"; shift 2 ;;
         -r|--repo) REPO_DIR="$2"; shift 2 ;;
-        -o|--ollama) OLLAMA_MODEL="$2"; shift 2 ;;
         -n|--dry-run) DRY_RUN=true; shift ;;
         -h|--help) usage ;;
         -*) die "Unknown option: $1" ;;

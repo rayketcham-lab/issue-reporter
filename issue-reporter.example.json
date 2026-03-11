@@ -2,7 +2,6 @@
   "project_name": "My Awesome App",
   "project_description": "A web app that does cool things",
   "repo_dir": ".",
-  "ollama_model": "llama3",
   "issue_types": [
     {"id": "bug", "label": "Bug Report", "description": "Something is broken"},
     {"id": "feature_request", "label": "Feature Request", "description": "I want something new"},
