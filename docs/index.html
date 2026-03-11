@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Issue Reporter - Drop a feedback button on any web page</title>
+<meta name="description" content="Drop a feedback button on any web page. Reports become GitHub issues. No backend required. No database. No API keys beyond a GitHub token.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --bg-card: #1c2128;
+  --border: #30363d;
+  --border-light: #3d444d;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #6e7681;
+  --accent: #58a6ff;
+  --accent-hover: #79c0ff;
+  --accent-dim: #1f6feb;
+  --accent-subtle: rgba(56, 139, 253, 0.1);
+  --teal: #3fb950;
+  --orange: #d29922;
+  --red: #f85149;
+  --purple: #bc8cff;
+  --sidebar-width: 280px;
+  --header-height: 0px;
+}
+
+html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.7;
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: var(--sidebar-width);
+  height: 100vh;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  z-index: 100;
+  padding: 24px 0;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-header {
+  padding: 0 20px 20px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.sidebar-logo {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sidebar-logo svg { flex-shrink: 0; }
+
+.sidebar nav { padding: 0 12px; }
+
+.sidebar nav a {
+  display: block;
+  padding: 6px 12px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 14px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  border-left: 2px solid transparent;
+  margin-bottom: 2px;
+}
+
+.sidebar nav a:hover {
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+}
+
+.sidebar nav a.active {
+  color: var(--accent);
+  background: var(--accent-subtle);
+  border-left-color: var(--accent);
+}
+
+.sidebar nav a.sub {
+  padding-left: 28px;
+  font-size: 13px;
+}
+
+/* ── Mobile hamburger ── */
+.hamburger {
+  display: none;
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 200;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.hamburger svg { display: block; }
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 90;
+}
+
+/* ── Main ── */
+.main {
+  margin-left: var(--sidebar-width);
+  min-height: 100vh;
+}
+
+/* ── Hero ── */
+.hero {
+  padding: 80px 48px 64px;
+  background: linear-gradient(135deg, #0d1117 0%, #161b22 50%, #0d1117 100%);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -200px;
+  right: -200px;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(56,139,253,0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--accent-subtle);
+  border: 1px solid rgba(56,139,253,0.3);
+  color: var(--accent);
+  padding: 4px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 24px;
+}
+
+.hero h1 {
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1.15;
+  margin-bottom: 16px;
+  letter-spacing: -1px;
+}
+
+.hero h1 span { color: var(--accent); }
+
+.hero-tagline {
+  font-size: 20px;
+  color: var(--text-secondary);
+  max-width: 600px;
+  margin-bottom: 36px;
+  line-height: 1.6;
+}
+
+.hero-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.btn-primary {
+  background: var(--accent-dim);
+  color: #fff;
+}
+
+.btn-primary:hover { background: var(--accent); color: #fff; }
+
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover { border-color: var(--border-light); background: var(--border); }
+
+.btn-try {
+  background: linear-gradient(135deg, var(--accent-dim), #8957e5);
+  color: #fff;
+}
+
+.btn-try:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(56,139,253,0.3); }
+
+/* ── Content ── */
+.content {
+  max-width: 880px;
+  padding: 48px;
+}
+
+.content section { margin-bottom: 64px; }
+
+.content h2 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  letter-spacing: -0.3px;
+}
+
+.content h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 32px 0 12px;
+  color: var(--text-primary);
+}
+
+.content p {
+  margin-bottom: 16px;
+  color: var(--text-secondary);
+}
+
+.content strong { color: var(--text-primary); }
+
+.content a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.content a:hover { text-decoration: underline; }
+
+.content ul, .content ol {
+  padding-left: 24px;
+  margin-bottom: 16px;
+}
+
+.content li {
+  margin-bottom: 6px;
+  color: var(--text-secondary);
+}
+
+.content li strong { color: var(--text-primary); }
+
+.content hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 48px 0;
+}
+
+/* ── Feature grid ── */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.feature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  transition: border-color 0.2s ease;
+}
+
+.feature-card:hover { border-color: var(--border-light); }
+
+.feature-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  font-size: 18px;
+}
+
+.feature-card h4 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.feature-card p {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* ── Code blocks ── */
+.code-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin: 20px 0;
+  overflow: hidden;
+}
+
+.code-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.copy-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 4px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.copy-btn:hover {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--border-light);
+}
+
+.copy-btn.copied {
+  color: var(--teal);
+  border-color: var(--teal);
+}
+
+.code-card pre {
+  margin: 0 !important;
+  padding: 16px !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  border: none !important;
+  overflow-x: auto;
+}
+
+.code-card pre code {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 13.5px !important;
+  line-height: 1.6 !important;
+}
+
+/* Override prism background */
+pre[class*="language-"] {
+  background: transparent !important;
+  margin: 0 !important;
+}
+
+code[class*="language-"],
+pre[class*="language-"] {
+  text-shadow: none !important;
+}
+
+/* Inline code */
+.content :not(pre) > code {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  padding: 2px 7px;
+  border-radius: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  color: var(--accent-hover);
+}
+
+/* ── Blockquote / callout ── */
+.callout {
+  background: var(--bg-card);
+  border-left: 3px solid var(--orange);
+  border-radius: 0 8px 8px 0;
+  padding: 16px 20px;
+  margin: 20px 0;
+}
+
+.callout p { margin: 0; font-size: 14px; }
+.callout strong { color: var(--orange); }
+
+/* ── Table ── */
+.table-wrap {
+  overflow-x: auto;
+  margin: 20px 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+th {
+  background: var(--bg-tertiary);
+  text-align: left;
+  padding: 12px 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border);
+}
+
+td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+
+tr:last-child td { border-bottom: none; }
+
+/* ── Accordion (details) ── */
+.accordion {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin: 12px 0;
+  overflow: hidden;
+}
+
+.accordion summary {
+  padding: 14px 20px;
+  background: var(--bg-card);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 15px;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  transition: background 0.15s ease;
+}
+
+.accordion summary:hover { background: var(--bg-tertiary); }
+
+.accordion summary::before {
+  content: '';
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 5px solid var(--text-muted);
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.accordion[open] summary::before { transform: rotate(90deg); }
+
+.accordion summary::-webkit-details-marker { display: none; }
+
+.accordion .accordion-body { border-top: 1px solid var(--border); }
+
+/* ── Diagram block ── */
+.diagram {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 24px 28px;
+  margin: 20px 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--text-secondary);
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.diagram .arrow { color: var(--accent); }
+.diagram .label { color: var(--teal); }
+.diagram .alt { color: var(--text-muted); }
+
+/* ── Footer ── */
+.footer {
+  padding: 32px 48px;
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footer a { color: var(--text-secondary); text-decoration: none; }
+.footer a:hover { color: var(--accent); }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-light); }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-overlay.open { display: block; }
+  .hamburger { display: block; }
+  .main { margin-left: 0; }
+  .hero { padding: 80px 24px 48px; }
+  .hero h1 { font-size: 32px; }
+  .hero-tagline { font-size: 17px; }
+  .content { padding: 32px 24px; }
+  .footer { padding: 24px; flex-direction: column; gap: 8px; }
+  .feature-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 480px) {
+  .hero h1 { font-size: 26px; }
+  .hero-buttons { flex-direction: column; }
+  .btn { justify-content: center; }
+}
+</style>
+</head>
+<body>
+
+<!-- Hamburger (mobile) -->
+<button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle navigation">
+  <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+    <rect y="3" width="20" height="2" rx="1" fill="currentColor"/>
+    <rect y="9" width="20" height="2" rx="1" fill="currentColor"/>
+    <rect y="15" width="20" height="2" rx="1" fill="currentColor"/>
+  </svg>
+</button>
+
+<!-- Sidebar overlay -->
+<div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <a href="#" class="sidebar-logo">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      issue-reporter
+    </a>
+  </div>
+  <nav id="toc-nav">
+    <a href="#features">Features</a>
+    <a href="#quick-start" >Quick Start</a>
+    <a href="#creating-the-token" class="sub">Creating the token</a>
+    <a href="#backend-integration">Backend Integration</a>
+    <a href="#github-enterprise">Enterprise &amp; Multi-Flavor</a>
+    <a href="#widget-options">Widget Options</a>
+    <a href="#programmatic-control" class="sub">Programmatic control</a>
+    <a href="#self-hosting" class="sub">Self-hosting</a>
+    <a href="#cli-usage">CLI Usage</a>
+    <a href="#bash-cli" class="sub">Bash</a>
+    <a href="#python-cli" class="sub">Python</a>
+    <a href="#pip-install" class="sub">pip install</a>
+    <a href="#how-it-works">How It Works</a>
+    <a href="#license">License</a>
+  </nav>
+</aside>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Hero -->
+  <header class="hero" id="top">
+    <div class="hero-badge">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      v2.2.0
+    </div>
+    <h1>issue-<span>reporter</span></h1>
+    <p class="hero-tagline">
+      Drop a feedback button on any web page. Reports become GitHub issues.
+      No backend required. No database. No API keys beyond a GitHub token scoped to issues.
+    </p>
+    <div class="hero-buttons">
+      <button class="btn btn-try" onclick="IssueReporter.open()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Try It
+      </button>
+      <a href="https://github.com/rayketcham-lab/issue-reporter" class="btn btn-secondary" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 016.02 0c2.28-1.55 3.28-1.23 3.28-1.23.66 1.66.26 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.42.36.81 1.1.81 2.22v3.29c0 .32.22.7.82.58A12.01 12.01 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        GitHub
+      </a>
+      <a href="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js" class="btn btn-secondary" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        CDN
+      </a>
+    </div>
+  </header>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- Features -->
+    <section id="features">
+      <h2>Features</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(56,139,253,0.15);color:var(--accent);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+          </div>
+          <h4>Dark Theme</h4>
+          <p>Sleek dark UI with backdrop blur</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(63,185,80,0.15);color:var(--teal);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          </div>
+          <h4>Multi-Step Wizard</h4>
+          <p>Type, Details, Review flow</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(210,153,34,0.15);color:var(--orange);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          <h4>Element Inspector</h4>
+          <p>Click to capture DOM elements</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(248,81,73,0.15);color:var(--red);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+          </div>
+          <h4>Console Error Capture</h4>
+          <p>Automatic error collection</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(188,140,255,0.15);color:var(--purple);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </div>
+          <h4>API Call Capture</h4>
+          <p>Automatic request logging</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(56,139,253,0.15);color:var(--accent);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></svg>
+          </div>
+          <h4>Severity Levels</h4>
+          <p>Low / Medium / High / Critical</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(63,185,80,0.15);color:var(--teal);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+          </div>
+          <h4>Zero Dependencies</h4>
+          <p>Single file, no build step</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon" style="background:rgba(210,153,34,0.15);color:var(--orange);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+          </div>
+          <h4>Direct GitHub API</h4>
+          <p>Or use your own backend</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Start -->
+    <section id="quick-start">
+      <h2>Quick Start &mdash; Pure HTML (no backend)</h2>
+      <p>Add two lines to your page. The widget calls the GitHub API directly.</p>
+
+      <div class="code-card">
+        <div class="code-card-header">
+          <span>HTML</span>
+          <button class="copy-btn" onclick="copyCode(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Copy
+          </button>
+        </div>
+        <pre><code class="language-html">&lt;script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  IssueReporter.init({
+    github: {
+      repo: "your-org/your-repo",
+      token: "github_pat_xxxx"
+    },
+    projectName: "My App"
+  });
+&lt;/script&gt;</code></pre>
+      </div>
+
+      <p>That's it. A floating "Report Issue" button appears. Click it, fill out the form, GitHub issue created.</p>
+
+      <h3 id="creating-the-token">Creating the token</h3>
+      <ol>
+        <li>Go to <a href="https://github.com/settings/tokens?type=beta" target="_blank" rel="noopener">github.com/settings/tokens?type=beta</a> (fine-grained tokens)</li>
+        <li><strong>Repository access:</strong> select only the repo you want issues in</li>
+        <li><strong>Permissions:</strong> Issues &rarr; Read and write (nothing else)</li>
+        <li>Copy the token into your <code>init()</code> call</li>
+      </ol>
+      <p>This token can <em>only</em> create issues on that one repo. It can't read your code, push commits, or access anything else.</p>
+
+      <div class="callout">
+        <p><strong>Token visibility tradeoff:</strong> In direct mode the token is visible in your page source. For internal tools or personal projects, that's fine &mdash; the worst anyone can do is create spam issues you can delete. For public-facing sites, use <strong>Backend Integration</strong> below so the token never leaves your server.</p>
+      </div>
+    </section>
+
+    <hr>
+
+    <!-- Backend Integration -->
+    <section id="backend-integration">
+      <h2>Backend Integration (recommended for public sites)</h2>
+      <p>Token stays on your server. The widget POSTs JSON to a route on your app, your app runs <code>gh issue create</code>. No token in the browser, no extra process.</p>
+
+      <div class="code-card">
+        <div class="code-card-header">
+          <span>HTML</span>
+          <button class="copy-btn" onclick="copyCode(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Copy
+          </button>
+        </div>
+        <pre><code class="language-html">&lt;script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  IssueReporter.init({ endpoint: "/api/report", projectName: "My App" });
+&lt;/script&gt;</code></pre>
+      </div>
+
+      <p>Your backend receives:</p>
+
+      <div class="code-card">
+        <div class="code-card-header">
+          <span>JSON</span>
+          <button class="copy-btn" onclick="copyCode(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Copy
+          </button>
+        </div>
+        <pre><code class="language-json">{
+  "type": "bug",
+  "severity": "high",
+  "description": "The save button doesn't work",
+  "expected_behavior": "Should save and show confirmation",
+  "context": null,
+  "project_name": "My App",
+  "page_url": "https://mysite.com/settings",
+  "page_title": "Settings - My App",
+  "page_type": "settings",
+  "section": "Account Settings",
+  "element_text": "&lt;button#save-btn.btn-primary&gt; \"Save Changes\"",
+  "console_errors": "[error] TypeError: Cannot read property 'save' of undefined",
+  "last_api_calls": "500 /api/settings/save\n200 /api/user/me"
+}</code></pre>
+      </div>
+
+      <p>And returns:</p>
+
+      <div class="code-card">
+        <div class="code-card-header">
+          <span>JSON</span>
+          <button class="copy-btn" onclick="copyCode(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Copy
+          </button>
+        </div>
+        <pre><code class="language-json">{"success": true, "url": "https://github.com/you/repo/issues/42"}</code></pre>
+      </div>
+
+      <p>Build the issue body from those fields so it matches what the direct GitHub mode produces. Pick your framework:</p>
+
+      <!-- FastAPI -->
+      <details class="accordion">
+        <summary>FastAPI</summary>
+        <div class="accordion-body">
+          <div class="code-card" style="border:none;border-radius:0;margin:0;">
+            <div class="code-card-header">
+              <span>Python</span>
+              <button class="copy-btn" onclick="copyCode(this)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                Copy
+              </button>
+            </div>
+            <pre><code class="language-python">import asyncio
+from fastapi import FastAPI
+
+app = FastAPI()
+
+def build_body(d: dict) -&gt; str:
+    parts = [f"## Summary\n\n{d['description']}"]
+    ctx = []
+    if d.get("page_url"):     ctx.append(f"- **Page:** {d['page_url']}")
+    if d.get("page_title"):   ctx.append(f"- **Page Title:** {d['page_title']}")
+    if d.get("section"):      ctx.append(f"- **Section:** {d['section']}")
+    if d.get("element_text"): ctx.append(f"- **Element:** {d['element_text']}")
+    if ctx: parts.append("\n## Context\n\n" + "\n".join(ctx))
+    if d.get("expected_behavior"):
+        parts.append(f"\n## Expected Behavior\n\n{d['expected_behavior']}")
+    if d.get("console_errors"):
+        parts.append(f"\n## Console Errors\n\n```\n{d['console_errors']}\n```")
+    if d.get("last_api_calls"):
+        parts.append(f"\n## Recent API Calls\n\n```\n{d['last_api_calls']}\n```")
+    meta = [f"- **Type:** {d.get('type','bug')}", f"- **Severity:** {d.get('severity','medium')}"]
+    if d.get("project_name"): meta.append(f"- **Project:** {d['project_name']}")
+    parts.append("\n## Metadata\n\n" + "\n".join(meta))
+    return "\n".join(parts)
+
+@app.post("/api/report")
+async def report_issue(body: dict):
+    desc = (body.get("description") or "").strip()
+    if not desc:
+        return {"success": False, "error": "description is required"}
+    title = f"{body.get('type', 'bug')}: {desc[:60]}"
+    issue_body = build_body(body)
+    proc = await asyncio.create_subprocess_exec(
+        "gh", "issue", "create", "--title", title, "--body", issue_body,
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+    )
+    stdout, _ = await proc.communicate()
+    url = stdout.decode().strip() if proc.returncode == 0 else None
+    if url:
+        return {"success": True, "url": url}
+    return {"success": False, "error": "gh issue create failed"}</code></pre>
+          </div>
+        </div>
+      </details>
+
+      <!-- Flask -->
+      <details class="accordion">
+        <summary>Flask</summary>
+        <div class="accordion-body">
+          <div class="code-card" style="border:none;border-radius:0;margin:0;">
+            <div class="code-card-header">
+              <span>Python</span>
+              <button class="copy-btn" onclick="copyCode(this)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                Copy
+              </button>
+            </div>
+            <pre><code class="language-python">import subprocess
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+def build_body(d: dict) -&gt; str:
+    parts = [f"## Summary\n\n{d['description']}"]
+    ctx = []
+    if d.get("page_url"):     ctx.append(f"- **Page:** {d['page_url']}")
+    if d.get("page_title"):   ctx.append(f"- **Page Title:** {d['page_title']}")
+    if d.get("section"):      ctx.append(f"- **Section:** {d['section']}")
+    if d.get("element_text"): ctx.append(f"- **Element:** {d['element_text']}")
+    if ctx: parts.append("\n## Context\n\n" + "\n".join(ctx))
+    if d.get("expected_behavior"):
+        parts.append(f"\n## Expected Behavior\n\n{d['expected_behavior']}")
+    if d.get("console_errors"):
+        parts.append(f"\n## Console Errors\n\n```\n{d['console_errors']}\n```")
+    if d.get("last_api_calls"):
+        parts.append(f"\n## Recent API Calls\n\n```\n{d['last_api_calls']}\n```")
+    meta = [f"- **Type:** {d.get('type','bug')}", f"- **Severity:** {d.get('severity','medium')}"]
+    if d.get("project_name"): meta.append(f"- **Project:** {d['project_name']}")
+    parts.append("\n## Metadata\n\n" + "\n".join(meta))
+    return "\n".join(parts)
+
+@app.post("/api/report")
+def report_issue():
+    data = request.get_json()
+    desc = (data.get("description") or "").strip()
+    if not desc:
+        return jsonify(success=False, error="description is required"), 400
+    title = f"{data.get('type', 'bug')}: {desc[:60]}"
+    body = build_body(data)
+    result = subprocess.run(
+        ["gh", "issue", "create", "--title", title, "--body", body],
+        capture_output=True, text=True, timeout=15,
+    )
+    if result.returncode == 0:
+        return jsonify(success=True, url=result.stdout.strip())
+    return jsonify(success=False, error="gh issue create failed"), 500</code></pre>
+          </div>
+        </div>
+      </details>
+
+      <!-- Express -->
+      <details class="accordion">
+        <summary>Express</summary>
+        <div class="accordion-body">
+          <div class="code-card" style="border:none;border-radius:0;margin:0;">
+            <div class="code-card-header">
+              <span>JavaScript</span>
+              <button class="copy-btn" onclick="copyCode(this)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                Copy
+              </button>
+            </div>
+            <pre><code class="language-javascript">const { execFile } = require("child_process");
+const app = require("express")();
+app.use(require("express").json());
+
+function buildBody(d) {
+  const parts = [`## Summary\n\n${d.description}`];
+  const ctx = [];
+  if (d.page_url)     ctx.push(`- **Page:** ${d.page_url}`);
+  if (d.page_title)   ctx.push(`- **Page Title:** ${d.page_title}`);
+  if (d.section)      ctx.push(`- **Section:** ${d.section}`);
+  if (d.element_text) ctx.push(`- **Element:** ${d.element_text}`);
+  if (ctx.length) parts.push("\n## Context\n\n" + ctx.join("\n"));
+  if (d.expected_behavior) parts.push(`\n## Expected Behavior\n\n${d.expected_behavior}`);
+  if (d.console_errors) parts.push(`\n## Console Errors\n\n\`\`\`\n${d.console_errors}\n\`\`\``);
+  if (d.last_api_calls) parts.push(`\n## Recent API Calls\n\n\`\`\`\n${d.last_api_calls}\n\`\`\``);
+  const meta = [`- **Type:** ${d.type || "bug"}`, `- **Severity:** ${d.severity || "medium"}`];
+  if (d.project_name) meta.push(`- **Project:** ${d.project_name}`);
+  parts.push("\n## Metadata\n\n" + meta.join("\n"));
+  return parts.join("\n");
+}
+
+app.post("/api/report", (req, res) =&gt; {
+  const desc = (req.body.description || "").trim();
+  if (!desc) return res.json({ success: false, error: "description is required" });
+  const title = `${req.body.type || "bug"}: ${desc.slice(0, 60)}`;
+  const body = buildBody(req.body);
+  execFile("gh", ["issue", "create", "--title", title, "--body", body], (err, stdout) =&gt; {
+    if (err) return res.json({ success: false, error: "gh issue create failed" });
+    res.json({ success: true, url: stdout.trim() });
+  });
+});</code></pre>
+          </div>
+        </div>
+      </details>
+
+      <!-- Django -->
+      <details class="accordion">
+        <summary>Django</summary>
+        <div class="accordion-body">
+          <div class="code-card" style="border:none;border-radius:0;margin:0;">
+            <div class="code-card-header">
+              <span>Python</span>
+              <button class="copy-btn" onclick="copyCode(this)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                Copy
+              </button>
+            </div>
+            <pre><code class="language-python">import json, subprocess
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+
+def build_body(d: dict) -&gt; str:
+    parts = [f"## Summary\n\n{d['description']}"]
+    ctx = []
+    if d.get("page_url"):     ctx.append(f"- **Page:** {d['page_url']}")
+    if d.get("page_title"):   ctx.append(f"- **Page Title:** {d['page_title']}")
+    if d.get("section"):      ctx.append(f"- **Section:** {d['section']}")
+    if d.get("element_text"): ctx.append(f"- **Element:** {d['element_text']}")
+    if ctx: parts.append("\n## Context\n\n" + "\n".join(ctx))
+    if d.get("expected_behavior"):
+        parts.append(f"\n## Expected Behavior\n\n{d['expected_behavior']}")
+    if d.get("console_errors"):
+        parts.append(f"\n## Console Errors\n\n```\n{d['console_errors']}\n```")
+    if d.get("last_api_calls"):
+        parts.append(f"\n## Recent API Calls\n\n```\n{d['last_api_calls']}\n```")
+    meta = [f"- **Type:** {d.get('type','bug')}", f"- **Severity:** {d.get('severity','medium')}"]
+    if d.get("project_name"): meta.append(f"- **Project:** {d['project_name']}")
+    parts.append("\n## Metadata\n\n" + "\n".join(meta))
+    return "\n".join(parts)
+
+@csrf_exempt
+def report_issue(request):
+    data = json.loads(request.body)
+    desc = (data.get("description") or "").strip()
+    if not desc:
+        return JsonResponse({"success": False, "error": "description is required"}, status=400)
+    title = f"{data.get('type', 'bug')}: {desc[:60]}"
+    body = build_body(data)
+    result = subprocess.run(
+        ["gh", "issue", "create", "--title", title, "--body", body],
+        capture_output=True, text=True, timeout=15,
+    )
+    if result.returncode == 0:
+        return JsonResponse({"success": True, "url": result.stdout.strip()})
+    return JsonResponse({"success": False, "error": "gh issue create failed"}, status=500)</code></pre>
+          </div>
+        </div>
+      </details>
+
+      <p style="margin-top:20px;">Backend mode requires <code>gh</code> CLI installed and authenticated on your server (<code>sudo apt install gh &amp;&amp; gh auth login</code>).</p>
+      <p>For a more complete backend with rate limiting, CORS, labels, and conventional-commit prefixes, see <code>server.py</code> in this repo.</p>
+    </section>
+
+    <hr>
+
+    <!-- GitHub Enterprise -->
+    <section id="github-enterprise">
+      <h2>GitHub Enterprise &amp; Multi-Flavor Support</h2>
+      <p>The widget works with any GitHub-compatible instance. Pass <code>apiUrl</code> in the <code>github</code> config to target on-prem or alternative deployments:</p>
+
+      <div class="code-card">
+        <div class="code-card-header">
+          <span>HTML</span>
+          <button class="copy-btn" onclick="copyCode(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Copy
+          </button>
+        </div>
+        <pre><code class="language-html">&lt;script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  IssueReporter.init({
+    github: {
+      repo: "YOUR-ORG/YOUR-REPO",
+      token: "github_pat_xxxxx",
+      apiUrl: "https://your-ghes-host/api/v3"  // GitHub Enterprise Server (on-prem)
+    },
+    projectName: "Your App Name"
+  });
+&lt;/script&gt;</code></pre>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Flavor</th>
+              <th><code>apiUrl</code> value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>GitHub.com</strong> (default)</td>
+              <td>Omit &mdash; defaults to <code>https://api.github.com</code></td>
+            </tr>
+            <tr>
+              <td><strong>GitHub Enterprise Server</strong> (on-prem)</td>
+              <td><code>https://&lt;hostname&gt;/api/v3</code></td>
+            </tr>
+            <tr>
+              <td><strong>GitHub Enterprise Cloud</strong> (GHEC)</td>
+              <td>Omit &mdash; same as github.com, org-scoped via token</td>
+            </tr>
+            <tr>
+              <td><strong>GitHub AE</strong></td>
+              <td><code>https://&lt;hostname&gt;/api/v3</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Token notes</h3>
+      <ul>
+        <li>Token requirements are the same across all flavors &mdash; scope to <code>repo</code> (or fine-grained Issues read/write) at minimum</li>
+        <li>On GHES / GitHub AE, generate the PAT from <em>that instance</em>, not github.com</li>
+        <li>Fine-grained tokens are supported on GHES 3.10+ and github.com</li>
+      </ul>
+    </section>
+
+    <hr>
+
+    <!-- Widget Options -->
+    <section id="widget-options">
+      <h2>Widget Options</h2>
+
+      <div class="code-card">
+        <div class="code-card-header">
+          <span>HTML</span>
+          <button class="copy-btn" onclick="copyCode(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Copy
+          </button>
+        </div>
+        <pre><code class="language-html">&lt;script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  IssueReporter.init({
+    // --- Pick one mode ---
+    github: {
+      repo: "owner/repo",
+      token: "github_pat_xxxx",
+      apiUrl: "https://ghes.example.com/api/v3"  // optional — for GHES/GitHub AE
+    },
+    // endpoint: "/api/report",                    // backend mode (alternative)
+
+    // --- Optional ---
+    projectName: "My App",
+    position: "bottom-right",             // or "bottom-left"
+    buttonText: "Report Issue",
+    token: "your-secret-token",           // backend mode only — sent as Bearer header
+    issueTypes: [
+      { id: "bug",             label: "Bug Report" },
+      { id: "data_issue",      label: "Data Issue" },
+      { id: "ui_bug",          label: "UI / Display Bug" },
+      { id: "broken_link",     label: "Broken Link" },
+      { id: "feature_request", label: "Feature Request" },
+      { id: "performance",     label: "Performance" },
+      { id: "other",           label: "Other" }
+    ]
+  });
+&lt;/script&gt;</code></pre>
+      </div>
+
+      <h3 id="programmatic-control">Programmatic control</h3>
+
+      <div class="code-card">
+        <div class="code-card-header">
+          <span>JavaScript</span>
+          <button class="copy-btn" onclick="copyCode(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Copy
+          </button>
+        </div>
+        <pre><code class="language-javascript">IssueReporter.open();    // Open the modal
+IssueReporter.close();   // Close the modal
+IssueReporter.destroy(); // Remove the widget entirely</code></pre>
+      </div>
+
+      <h3 id="self-hosting">Self-hosting the JS</h3>
+
+      <div class="code-card">
+        <div class="code-card-header">
+          <span>Bash</span>
+          <button class="copy-btn" onclick="copyCode(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Copy
+          </button>
+        </div>
+        <pre><code class="language-bash">curl -O https://raw.githubusercontent.com/rayketcham-lab/issue-reporter/v2.2.0/issue-reporter.js</code></pre>
+      </div>
+
+      <p>No build step. No dependencies. One file.</p>
+    </section>
+
+    <hr>
+
+    <!-- CLI Usage -->
+    <section id="cli-usage">
+      <h2>CLI Usage</h2>
+      <p>Create issues from the terminal &mdash; no widget needed.</p>
+
+      <h3 id="bash-cli">Bash</h3>
+      <div class="code-card">
+        <div class="code-card-header">
+          <span>Bash</span>
+          <button class="copy-btn" onclick="copyCode(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Copy
+          </button>
+        </div>
+        <pre><code class="language-bash">curl -O https://raw.githubusercontent.com/rayketcham-lab/issue-reporter/main/issue-reporter.sh
+chmod +x issue-reporter.sh
+
+./issue-reporter.sh                                    # Interactive
+./issue-reporter.sh "The login button doesn't work"    # One-liner
+./issue-reporter.sh -t feature -s low "Add dark mode"  # Type + severity
+tail -20 error.log | ./issue-reporter.sh -t bug -s high  # Pipe from logs
+./issue-reporter.sh --dry-run "Test issue"             # Preview only</code></pre>
+      </div>
+
+      <h3 id="python-cli">Python</h3>
+      <div class="code-card">
+        <div class="code-card-header">
+          <span>Bash</span>
+          <button class="copy-btn" onclick="copyCode(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Copy
+          </button>
+        </div>
+        <pre><code class="language-bash">curl -O https://raw.githubusercontent.com/rayketcham-lab/issue-reporter/main/issue_reporter.py
+
+python issue_reporter.py "The save button is broken"
+python issue_reporter.py --type feature "Add export button"
+python issue_reporter.py --dry-run "Test"</code></pre>
+      </div>
+
+      <div class="code-card">
+        <div class="code-card-header">
+          <span>Python</span>
+          <button class="copy-btn" onclick="copyCode(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Copy
+          </button>
+        </div>
+        <pre><code class="language-python"># As a library
+from issue_reporter import IssueReporter
+
+reporter = IssueReporter(project_name="My App")
+url = reporter.report("The save button doesn't work", issue_type="bug")
+print(url)  # https://github.com/you/repo/issues/42</code></pre>
+      </div>
+
+      <h3 id="pip-install">pip install</h3>
+      <div class="code-card">
+        <div class="code-card-header">
+          <span>Bash</span>
+          <button class="copy-btn" onclick="copyCode(this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            Copy
+          </button>
+        </div>
+        <pre><code class="language-bash">pip install git+https://github.com/rayketcham-lab/issue-reporter.git</code></pre>
+      </div>
+
+      <p>CLI requires <code>gh</code> CLI installed and authenticated.</p>
+    </section>
+
+    <hr>
+
+    <!-- How It Works -->
+    <section id="how-it-works">
+      <h2>How It Works</h2>
+      <div class="diagram"><span class="label">Browser widget</span> <span class="arrow">--&gt;</span> GitHub API directly <span class="alt">(no backend)</span>
+       <span class="alt">or</span>
+<span class="label">Browser widget</span> <span class="arrow">--&gt;</span> GitHub Enterprise API <span class="alt">(on-prem, via apiUrl)</span>
+       <span class="alt">or</span>
+<span class="label">Browser widget</span> <span class="arrow">--&gt;</span> Your backend route <span class="arrow">--&gt;</span> gh issue create <span class="arrow">--&gt;</span> <span class="label">GitHub Issues</span>
+       <span class="alt">or</span>
+<span class="label">CLI (bash/python)</span> <span class="arrow">--&gt;</span> gh issue create <span class="arrow">--&gt;</span> <span class="label">GitHub Issues</span></div>
+    </section>
+
+    <!-- License -->
+    <section id="license">
+      <h2>License</h2>
+      <p>MIT</p>
+    </section>
+
+  </div>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <span>issue-reporter - MIT License</span>
+    <a href="https://github.com/rayketcham-lab/issue-reporter" target="_blank" rel="noopener">GitHub</a>
+  </footer>
+
+</div>
+
+<!-- Prism.js for syntax highlighting -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+
+<!-- Issue Reporter widget (live demo) -->
+<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"></script>
+<script>
+  // Initialize with a dummy endpoint so it doesn't actually submit
+  IssueReporter.init({
+    endpoint: "/demo",
+    projectName: "Issue Reporter Demo"
+  });
+</script>
+
+<script>
+// ── Sidebar toggle ──
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.querySelector('.sidebar-overlay').classList.toggle('open');
+}
+
+// Close sidebar when clicking a link on mobile
+document.querySelectorAll('#toc-nav a').forEach(function(link) {
+  link.addEventListener('click', function() {
+    if (window.innerWidth <= 900) {
+      document.getElementById('sidebar').classList.remove('open');
+      document.querySelector('.sidebar-overlay').classList.remove('open');
+    }
+  });
+});
+
+// ── Copy to clipboard ──
+function copyCode(btn) {
+  var codeCard = btn.closest('.code-card');
+  var code = codeCard.querySelector('code');
+  var text = code.textContent;
+  navigator.clipboard.writeText(text).then(function() {
+    btn.classList.add('copied');
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Copied!';
+    setTimeout(function() {
+      btn.classList.remove('copied');
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy';
+    }, 2000);
+  });
+}
+
+// ── Active ToC highlighting on scroll ──
+(function() {
+  var tocLinks = document.querySelectorAll('#toc-nav a');
+  var sections = [];
+
+  tocLinks.forEach(function(link) {
+    var href = link.getAttribute('href');
+    if (href && href.startsWith('#')) {
+      var target = document.getElementById(href.slice(1));
+      if (target) {
+        sections.push({ el: target, link: link });
+      }
+    }
+  });
+
+  function updateActive() {
+    var scrollY = window.scrollY + 80;
+    var current = null;
+
+    for (var i = sections.length - 1; i >= 0; i--) {
+      if (sections[i].el.offsetTop <= scrollY) {
+        current = sections[i];
+        break;
+      }
+    }
+
+    tocLinks.forEach(function(l) { l.classList.remove('active'); });
+    if (current) {
+      current.link.classList.add('active');
+    }
+  }
+
+  var ticking = false;
+  window.addEventListener('scroll', function() {
+    if (!ticking) {
+      requestAnimationFrame(function() {
+        updateActive();
+        ticking = false;
+      });
+      ticking = true;
+    }
+  });
+
+  updateActive();
+})();
+</script>
+
+</body>
+</html>

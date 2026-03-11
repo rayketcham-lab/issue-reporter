@@ -1,5 +1,7 @@
 # issue-reporter
 
+![Version](https://img.shields.io/badge/version-2.2.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Dependencies](https://img.shields.io/badge/dependencies-none-brightgreen) ![Size](https://img.shields.io/badge/size-~67kb-lightgrey) ![GitHub Stars](https://img.shields.io/github/stars/rayketcham-lab/issue-reporter?style=social)
+
 Drop a feedback button on any web page. Reports become GitHub issues.
 
 No backend required. No database. No API keys beyond a GitHub token scoped to issues.
@@ -35,6 +37,9 @@ No backend required. No database. No API keys beyond a GitHub token scoped to is
 - Direct GitHub API or backend modes
 - Zero dependencies, single file
 
+> [!TIP]
+> Two lines of HTML is all you need — no build step, no framework, no dependencies.
+
 ## Quick Start — Pure HTML (no backend)
 
 Add two lines to your page. The widget calls the GitHub API directly.
@@ -63,6 +68,7 @@ That's it. A floating "Report Issue" button appears. Click it, fill out the form
 
 This token can *only* create issues on that one repo. It can't read your code, push commits, or access anything else.
 
+> [!WARNING]
 > **Token visibility tradeoff:** In direct mode the token is visible in your page source. For internal tools or personal projects, that's fine — the worst anyone can do is create spam issues you can delete. For public-facing sites, use **Backend Integration** below so the token never leaves your server.
 
 ---
@@ -282,7 +288,8 @@ def report_issue(request):
 ```
 </details>
 
-Backend mode requires `gh` CLI installed and authenticated on your server (`sudo apt install gh && gh auth login`).
+> [!IMPORTANT]
+> Backend mode requires the `gh` CLI installed and authenticated on your server (`sudo apt install gh && gh auth login`).
 
 For a more complete backend with rate limiting, CORS, labels, and conventional-commit prefixes, see `server.py` in this repo.
 
@@ -312,6 +319,9 @@ The widget works with any GitHub-compatible instance. Pass `apiUrl` in the `gith
 | **GitHub Enterprise Server** (on-prem) | `https://<hostname>/api/v3` |
 | **GitHub Enterprise Cloud** (GHEC) | Omit — same as github.com, org-scoped via token |
 | **GitHub AE** | `https://<hostname>/api/v3` |
+
+> [!NOTE]
+> On GHES / GitHub AE, generate your personal access token from *that instance's* token settings page, not from github.com. Tokens are not transferable between instances.
 
 **Token notes:**
 - Token requirements are the same across all flavors — scope to `repo` (or fine-grained Issues read/write) at minimum
