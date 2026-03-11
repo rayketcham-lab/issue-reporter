@@ -9,9 +9,6 @@ set -euo pipefail
 #   ./issue-reporter.sh -t feature "Add dark mode"   # Specify type
 #   echo "Error desc" | ./issue-reporter.sh -t bug   # Pipe mode
 #
-# Optional AI backend (for smarter formatting — works fine without):
-#   Anthropic Claude: Set ANTHROPIC_API_KEY env var
-#
 # Config: Place issue-reporter.conf in the same directory to customize:
 #   PROJECT_NAME="My App"
 #   REPO_DIR="/path/to/repo"
@@ -63,69 +60,10 @@ labels_for_type() {
 }
 
 # ---------------------------------------------------------------------------
-# AI structuring (optional — needs curl + ANTHROPIC_API_KEY)
+# Issue structuring
 # ---------------------------------------------------------------------------
 
-ai_structure() {
-    local description="$1"
-    local issue_type="$2"
-    local severity="$3"
-
-    local api_key="${ANTHROPIC_API_KEY:-}"
-    if [[ -z "$api_key" ]]; then
-        return 1
-    fi
-    command -v curl &>/dev/null || return 1
-
-    local system_prompt="You are a QA assistant. Take raw user feedback and structure it into a clean, actionable GitHub issue.
-${PROJECT_NAME:+The project is called \"${PROJECT_NAME}\".}
-
-Respond with ONLY valid JSON (no markdown fencing), with these fields:
-- \"title\": concise issue title under 70 chars, prefixed appropriately (e.g., \"fix: ...\", \"feat: ...\")
-- \"body\": well-structured GitHub issue body in markdown with ## Summary, ## Steps to Reproduce (if applicable), ## Expected Behavior, ## Current Behavior sections
-- \"labels\": array of 1-3 labels from: bug, enhancement, data, ui, performance, critical, documentation"
-
-    local user_msg="Structure this user feedback into a GitHub issue:
-
-**Issue Type:** ${issue_type}
-**Severity:** ${severity}
-
-**User Description:**
-${description}"
-
-    local payload
-    payload=$(jq -n \
-        --arg model "${CLAUDE_MODEL:-claude-sonnet-4-20250514}" \
-        --arg system "$system_prompt" \
-        --arg user "$user_msg" \
-        '{model: $model, max_tokens: 1024, system: $system, messages: [{role: "user", content: $user}]}')
-
-    local response
-    response=$(curl -s --max-time 30 \
-        -H "x-api-key: ${api_key}" \
-        -H "anthropic-version: 2023-06-01" \
-        -H "content-type: application/json" \
-        -d "$payload" \
-        "https://api.anthropic.com/v1/messages" 2>/dev/null) || return 1
-
-    # Extract the text content and parse as JSON
-    local text
-    text=$(echo "$response" | jq -r '.content[0].text // empty' 2>/dev/null) || return 1
-    [[ -z "$text" ]] && return 1
-
-    # Strip markdown fences if present
-    text=$(echo "$text" | sed '/^```/d')
-
-    # Validate it's valid JSON with required fields
-    echo "$text" | jq -e '.title and .body' &>/dev/null || return 1
-    echo "$text"
-}
-
-# ---------------------------------------------------------------------------
-# Fallback structuring (no dependencies)
-# ---------------------------------------------------------------------------
-
-fallback_structure() {
+structure_issue() {
     local description="$1"
     local issue_type="$2"
     local severity="$3"
@@ -139,7 +77,6 @@ fallback_structure() {
         title_text="${title_text% *}..."
     fi
 
-    # Set globals (avoids tab-parsing issues with multiline body)
     _TITLE="${prefix}: ${title_text}"
     _BODY="## Summary
 
@@ -246,15 +183,7 @@ interactive() {
 do_report() {
     local description="$1"
 
-    # Try Claude API first (if configured), then fall back to deterministic formatting
-    local ai_result=""
-    if ai_result=$(ai_structure "$description" "$ISSUE_TYPE" "$SEVERITY" 2>/dev/null); then
-        _TITLE=$(echo "$ai_result" | jq -r '.title')
-        _BODY=$(echo "$ai_result" | jq -r '.body')
-        _LABELS=$(echo "$ai_result" | jq -r '.labels | join(",")')
-    else
-        fallback_structure "$description" "$ISSUE_TYPE" "$SEVERITY"
-    fi
+    structure_issue "$description" "$ISSUE_TYPE" "$SEVERITY"
 
     if [[ "$DRY_RUN" == "true" ]]; then
         echo "Title: ${_TITLE}"
@@ -295,9 +224,6 @@ Examples:
   $(basename "$0") "Login button is broken"          # Quick bug report
   $(basename "$0") -t feature "Add dark mode"        # Feature request
   echo "Error details" | $(basename "$0") -t bug     # Pipe mode
-
-Environment:
-  ANTHROPIC_API_KEY     Optional — enables AI-powered issue formatting via Claude
 USAGE
     exit 0
 }

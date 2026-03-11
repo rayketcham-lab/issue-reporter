@@ -21,16 +21,12 @@ Usage:
 Requirements:
     - gh CLI (authenticated): https://cli.github.com  (FREE)
     - Python 3.10+
-
-Optional AI backend (for smarter formatting — works fine without):
-    - Anthropic Claude: pip install httpx, set ANTHROPIC_API_KEY
 """
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import subprocess
 import sys
 from dataclasses import dataclass, field
@@ -61,13 +57,6 @@ DEFAULT_LABELS: dict[str, list[str]] = {
     "other": ["bug"],
 }
 
-DEFAULT_SYSTEM_PROMPT = """You are a QA assistant. Take raw user feedback and structure it into a clean, actionable GitHub issue.
-
-Respond with ONLY valid JSON (no markdown fencing), with these fields:
-- "title": concise issue title under 70 chars, prefixed appropriately (e.g., "fix: ...", "feat: ...")
-- "body": well-structured GitHub issue body in markdown with ## Summary, ## Steps to Reproduce (if applicable), ## Expected Behavior, ## Current Behavior sections
-- "labels": array of 1-3 labels from: {valid_labels}"""
-
 
 @dataclass
 class IssueReporter:
@@ -85,24 +74,6 @@ class IssueReporter:
         "bug", "enhancement", "data", "ui", "performance",
         "documentation", "critical",
     }))
-
-    # AI configuration (optional — works fine without any AI)
-    system_prompt: str = ""
-    api_key: str = ""  # Anthropic API key (optional)
-    model: str = "claude-sonnet-4-20250514"
-
-    def __post_init__(self) -> None:
-        if not self.api_key:
-            self.api_key = os.getenv("ANTHROPIC_API_KEY", "")
-        if not self.system_prompt:
-            self.system_prompt = DEFAULT_SYSTEM_PROMPT.format(
-                valid_labels=", ".join(sorted(self.valid_labels))
-            )
-            if self.project_name:
-                self.system_prompt = (
-                    f"The project is called \"{self.project_name}\". "
-                    f"{self.project_description}\n\n{self.system_prompt}"
-                )
 
     # ------------------------------------------------------------------
     # Config file loading
@@ -133,9 +104,6 @@ class IssueReporter:
             issue_types=cfg.get("issue_types", DEFAULT_ISSUE_TYPES),
             label_map=cfg.get("label_map", DEFAULT_LABELS),
             valid_labels=frozenset(cfg.get("valid_labels", DEFAULT_LABELS.keys())),
-            system_prompt=cfg.get("system_prompt", ""),
-            api_key=cfg.get("api_key", ""),
-            model=cfg.get("model", "claude-sonnet-4-20250514"),
         )
 
     # ------------------------------------------------------------------
@@ -161,103 +129,7 @@ class IssueReporter:
         severity: str,
         context: dict[str, str],
     ) -> dict[str, Any]:
-        """Structure user feedback into an issue.
-
-        Tries Claude API first (if configured), then falls back to deterministic formatting.
-        """
-        if self.api_key:
-            result = self._ai_structure(description, issue_type, severity, context)
-            if result:
-                return result
-        # Deterministic fallback (always works)
-        return self._fallback_structure(description, issue_type, severity, context)
-
-    def _ai_structure(
-        self,
-        description: str,
-        issue_type: str,
-        severity: str,
-        context: dict[str, str],
-    ) -> dict[str, Any] | None:
-        """Use Claude API to structure the issue. Returns None on failure."""
-        try:
-            import httpx
-        except ImportError:
-            return None
-
-        context_lines = "\n".join(f"**{k}:** {v}" for k, v in context.items()) if context else "None"
-        user_msg = (
-            f"Structure this user feedback into a GitHub issue:\n\n"
-            f"**Issue Type:** {issue_type}\n"
-            f"**Severity:** {severity}\n"
-            f"{context_lines}\n\n"
-            f"**User Description:**\n{description}"
-        )
-
-        try:
-            with httpx.Client(timeout=30.0) as client:
-                response = client.post(
-                    "https://api.anthropic.com/v1/messages",
-                    headers={
-                        "x-api-key": self.api_key,
-                        "anthropic-version": "2023-06-01",
-                        "content-type": "application/json",
-                    },
-                    json={
-                        "model": self.model,
-                        "max_tokens": 1024,
-                        "system": self.system_prompt,
-                        "messages": [{"role": "user", "content": user_msg}],
-                    },
-                )
-                response.raise_for_status()
-
-            data = response.json()
-            content = data.get("content", [])
-            if content and content[0].get("type") == "text":
-                text = content[0]["text"].strip()
-                if text.startswith("```"):
-                    text = text.split("\n", 1)[1] if "\n" in text else text[3:]
-                if text.endswith("```"):
-                    text = text.rsplit("\n", 1)[0] if "\n" in text else text[:-3]
-                parsed = json.loads(text)
-                return self._validate_ai_response(parsed, issue_type)
-        except Exception as exc:
-            print(f"AI structuring failed, using fallback: {exc}", file=sys.stderr)
-        return None
-
-    def _validate_ai_response(self, parsed: dict, issue_type: str) -> dict[str, Any] | None:
-        """Validate AI-generated issue structure."""
-        if not isinstance(parsed, dict):
-            return None
-        title = parsed.get("title", "")
-        body = parsed.get("body", "")
-        labels = parsed.get("labels", [])
-
-        if not isinstance(title, str) or not title.strip():
-            return None
-        if not isinstance(body, str) or not body.strip():
-            return None
-
-        title = title[:120]
-        body = body[:10000]
-
-        if not isinstance(labels, list):
-            labels = self.label_map.get(issue_type, ["bug"])
-        labels = [lb for lb in labels if isinstance(lb, str) and lb in self.valid_labels]
-        if not labels:
-            labels = self.label_map.get(issue_type, ["bug"])
-
-        return {"title": title, "body": body, "labels": labels[:3]}
-
-    def _fallback_structure(
-        self,
-        description: str,
-        issue_type: str,
-        severity: str,
-        context: dict[str, str],
-    ) -> dict[str, Any]:
-        """Create a structured issue without AI."""
+        """Structure user feedback into a well-formatted issue."""
         prefix_map = {
             "bug": "fix",
             "feature_request": "feat",

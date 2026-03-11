@@ -74,17 +74,6 @@ url = reporter.report("The save button doesn't work", issue_type="bug")
 print(url)  # https://github.com/you/repo/issues/42
 ```
 
-## Optional: AI formatting
-
-Without AI, issues get clean deterministic formatting. With AI, you get smarter titles and better-structured bodies.
-
-```bash
-export ANTHROPIC_API_KEY="sk-ant-..."
-# Now issue-reporter auto-uses Claude for formatting
-```
-
-**Priority:** Claude API (if key set) → deterministic fallback. It always works without AI.
-
 ## Configuration
 
 Optional. Copy `issue-reporter.example.json` → `issue-reporter.json`:
@@ -153,11 +142,11 @@ def handle_feedback(description: str, issue_type: str = "bug"):
 ## How it works
 
 ```
-User feedback → [Claude/fallback] → Structured issue → gh issue create → GitHub
+User feedback → Structured issue → gh issue create → GitHub
 ```
 
 1. You describe the problem in plain text
-2. (Optional) AI formats it into a proper issue with title, labels, sections
+2. Tool formats it into a proper issue with title, labels, and sections
 3. `gh` CLI creates the issue in your repo
 4. You get back the issue URL
 
