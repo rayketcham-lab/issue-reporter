@@ -4,6 +4,23 @@ Drop a feedback button on any web page. Reports become GitHub issues.
 
 No backend required. No database. No API keys beyond a GitHub token scoped to issues.
 
+## Table of Contents
+
+- [Features](#features)
+- [Quick Start — Pure HTML (no backend)](#quick-start--pure-html-no-backend)
+  - [Creating the token](#creating-the-token)
+- [Backend Integration (recommended for public sites)](#backend-integration-recommended-for-public-sites)
+- [GitHub Enterprise & Multi-Flavor Support](#github-enterprise--multi-flavor-support)
+- [Widget Options](#widget-options)
+  - [Programmatic control](#programmatic-control)
+  - [Self-hosting the JS](#self-hosting-the-js)
+- [CLI Usage](#cli-usage)
+  - [Bash](#bash)
+  - [Python](#python)
+  - [pip install](#pip-install)
+- [How It Works](#how-it-works)
+- [License](#license)
+
 ## Features
 
 - Dark theme with backdrop blur
