@@ -119,6 +119,9 @@ class IssueReporter:
         context: dict[str, str] | None = None,
     ) -> str | None:
         """Create a GitHub issue. Returns the issue URL or None on failure."""
+        valid_ids = frozenset(t["id"] for t in self.issue_types)
+        if issue_type not in valid_ids:
+            issue_type = "bug"
         issue = self._structure_issue(description, issue_type, severity, context or {})
         return self._create_gh_issue(issue["title"], issue["body"], issue["labels"])
 
@@ -322,17 +325,20 @@ def main() -> None:
         url = _interactive_report(reporter)
         sys.exit(0 if url else 1)
 
-    # CLI mode
+    # CLI mode — validate issue_type against known types
+    valid_ids = frozenset(t["id"] for t in reporter.issue_types)
+    issue_type = args.type if args.type in valid_ids else "bug"
+
     context = dict(args.context) if args.context else {}
 
     if args.dry_run:
-        issue = reporter._structure_issue(description, args.type, args.severity, context)
+        issue = reporter._structure_issue(description, issue_type, args.severity, context)
         print(f"Title: {issue['title']}")
         print(f"Labels: {issue['labels']}")
         print(f"\n{issue['body']}")
         return
 
-    url = reporter.report(description, issue_type=args.type, severity=args.severity, context=context)
+    url = reporter.report(description, issue_type=issue_type, severity=args.severity, context=context)
     sys.exit(0 if url else 1)
 
 

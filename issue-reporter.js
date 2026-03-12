@@ -911,8 +911,10 @@
 
   function buildPayload() {
     var typeObj = state.selectedType || {};
+    var validIds = config.issueTypes.map(function (t) { return t.id; });
+    var typeId = typeObj.id && validIds.indexOf(typeObj.id) !== -1 ? typeObj.id : "bug";
     return {
-      type: typeObj.id || "other",
+      type: typeId,
       severity: state.severity,
       description: state.description.trim(),
       expected_behavior: state.expectedBehavior.trim() || null,
