@@ -7,15 +7,47 @@ on:
     branches: [main]
 
 jobs:
-  validate-input-handling:
-    runs-on: ubuntu-latest
+  test-ubuntu-postgres:
+    name: "Test — Ubuntu2 (postgres)"
+    runs-on: [self-hosted, Linux, X64, postgres]
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Ensure Python 3
+        run: python3 --version
 
-      - name: Run input validation tests
-        run: python -m pytest tests/test_input_validation.py -v
+      - name: Install pytest
+        run: python3 -m pip install --user pytest
+
+      - name: Run tests
+        run: python3 -m pytest tests/ -v
+
+  test-linux:
+    name: "Test — Linux"
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure Python 3
+        run: python3 --version
+
+      - name: Install pytest
+        run: python3 -m pip install --user pytest
+
+      - name: Run tests
+        run: python3 -m pytest tests/ -v
+
+  test-windows:
+    name: "Test — Windows"
+    runs-on: [self-hosted, Windows, X64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure Python 3
+        run: python --version
+
+      - name: Install pytest
+        run: python -m pip install --user pytest
+
+      - name: Run tests
+        run: python -m pytest tests/ -v
