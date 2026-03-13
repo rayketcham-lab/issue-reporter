@@ -45,7 +45,7 @@ No backend required. No database. No API keys beyond a GitHub token scoped to is
 Add two lines to your page. The widget calls the GitHub API directly.
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@main/issue-reporter.js"></script>
 <script>
   IssueReporter.init({
     github: {
@@ -78,7 +78,7 @@ This token can *only* create issues on that one repo. It can't read your code, p
 Token stays on your server. The widget POSTs JSON to a route on your app, your app runs `gh issue create`. No token in the browser, no extra process.
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@main/issue-reporter.js"></script>
 <script>
   IssueReporter.init({ endpoint: "/api/report", projectName: "My App" });
 </script>
@@ -300,7 +300,7 @@ For a more complete backend with rate limiting, CORS, labels, and conventional-c
 The widget works with any GitHub-compatible instance. Pass `apiUrl` in the `github` config to target on-prem or alternative deployments:
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@main/issue-reporter.js"></script>
 <script>
   IssueReporter.init({
     github: {
@@ -333,7 +333,7 @@ The widget works with any GitHub-compatible instance. Pass `apiUrl` in the `gith
 ## Widget Options
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@main/issue-reporter.js"></script>
 <script>
   IssueReporter.init({
     // --- Pick one mode ---
