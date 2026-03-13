@@ -45,7 +45,7 @@ No backend required. No database. No API keys beyond a GitHub token scoped to is
 Add two lines to your page. The widget calls the GitHub API directly.
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@main/issue-reporter.js"></script>
 <script>
   IssueReporter.init({
     github: {
