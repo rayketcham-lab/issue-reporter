@@ -28,7 +28,7 @@
  *     projectName: "My App"
  *   });
  *
- * @license MIT
+ * @license Apache-2.0
  * @see https://github.com/rayketcham-lab/issue-reporter
  */
 (function () {

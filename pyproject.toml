@@ -8,7 +8,7 @@ version = "2.2.0"
 description = "Drop a feedback button on any web page. Reports become GitHub issues. No dependencies."
 readme = "README.md"
 requires-python = ">=3.10"
-license = "MIT"
+license = "Apache-2.0"
 authors = [{name = "Ray Ketcham"}]
 
 dependencies = []
