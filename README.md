@@ -438,6 +438,19 @@ Browser widget ──→ Your backend route ──→ gh issue create ──→ 
 CLI (bash/python) ──→ gh issue create ──→ GitHub Issues
 ```
 
+---
+
+## Contributing
+
+We welcome contributions. This is a zero-dependency project — keep it that way.
+
+Before submitting a PR:
+- Test the widget in Chrome, Firefox, and Safari
+- Verify WCAG 2.1 AA accessibility (keyboard navigation, screen reader)
+- No inline styles or scripts (CSP compliant)
+
+All commits follow [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `ci:`, `security:`.
+
 ## License
 
 Apache-2.0
