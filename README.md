@@ -11,6 +11,9 @@ No backend required. No database. No API keys beyond a GitHub token scoped to is
 - [Features](#features)
 - [Quick Start — Pure HTML (no backend)](#quick-start--pure-html-no-backend)
   - [Creating the token](#creating-the-token)
+  - [Threat Model](#threat-model)
+  - [Content Security Policy](#content-security-policy)
+  - [Supply-chain pinning](#supply-chain-pinning)
 - [Backend Integration (recommended for public sites)](#backend-integration-recommended-for-public-sites)
 - [GitHub Enterprise & Multi-Flavor Support](#github-enterprise--multi-flavor-support)
 - [Widget Options](#widget-options)
@@ -21,6 +24,8 @@ No backend required. No database. No API keys beyond a GitHub token scoped to is
   - [Python](#python)
   - [pip install](#pip-install)
 - [How It Works](#how-it-works)
+- [Security](#security)
+- [Contributing](#contributing)
 - [License](#license)
 
 ## Features
@@ -45,7 +50,10 @@ No backend required. No database. No API keys beyond a GitHub token scoped to is
 Add two lines to your page. The widget calls the GitHub API directly.
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@main/issue-reporter.js"></script>
+<script
+  src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"
+  integrity="sha384-txgHnE0+4iRNM0HAWBTP6Eln2q4AyZ+hNLyPxckOUmUUtZaFAuegO/p7yn6pXwUN"
+  crossorigin="anonymous"></script>
 <script>
   IssueReporter.init({
     github: {
@@ -71,6 +79,47 @@ This token can *only* create issues on that one repo. It can't read your code, p
 > [!WARNING]
 > **Token visibility tradeoff:** In direct mode the token is visible in your page source. For internal tools or personal projects, that's fine — the worst anyone can do is create spam issues you can delete. For public-facing sites, use **Backend Integration** below so the token never leaves your server.
 
+### Threat Model
+
+Read this before you put the widget on a public site.
+
+| Mode       | Where the token lives | Who can see it                                                                 | Rate-limit enforcement                  | Recommended for            |
+| ---------- | --------------------- | ------------------------------------------------------------------------------ | --------------------------------------- | -------------------------- |
+| Direct     | Browser (page source) | Anyone who views source, any browser extension, any third-party script on the page (analytics, tag managers, ad SDKs) | None in browser — only GitHub's PAT limit (5000 req/hr) | Intranet, staging, demos   |
+| Backend    | Server process        | Server operators only                                                          | Your server (the reference `server.py` does 5/min/IP) | Public-facing sites        |
+
+**If you ship direct mode in production:**
+
+- **Scope the token to a dedicated triage repo**, not your production code repo. A leaked PAT that can only file issues to `your-org/feedback-intake` is a much smaller blast radius than one pointing at `your-org/main-app`.
+- **Use a fine-grained token** with `Issues: read/write` only. No other permission.
+- **Rotate on a schedule** (30 days is a reasonable default) and immediately if you see anomalous issue volume.
+- **Accept that any page visitor can spam issues** up to the PAT's hourly budget. GitHub will throttle before your repo fills up, but you will need to delete/close the garbage.
+- **Third-party scripts can exfiltrate the token.** If your page loads analytics, tag managers, chat widgets, or ad SDKs, those scripts run in the same origin and can read the widget's config. Direct mode is *not* safe when you do not fully trust every script on the page.
+
+### Content Security Policy
+
+The widget works with a strict CSP. Minimum directives:
+
+```
+connect-src 'self' https://api.github.com;          /* or your GHES host     */
+style-src   'self' 'unsafe-inline';                 /* widget injects <style> */
+img-src     'self' data:;                           /* for inline icons       */
+script-src  'self' https://cdn.jsdelivr.net;        /* drop jsdelivr if you self-host the JS */
+```
+
+The widget does not use `eval`, inline event handlers, or `unsafe-eval`. If you self-host `issue-reporter.js` you can drop the jsDelivr origin from `script-src`.
+
+### Supply-chain pinning
+
+All `<script>` examples in this README pin a version tag and include an `integrity="sha384-..."` hash. **Do not replace the tag with `@main` in production** — `@main` auto-updates with every commit and has no integrity guarantee.
+
+To upgrade, bump the tag and regenerate the hash:
+
+```bash
+curl -sL "https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@<TAG>/issue-reporter.js" \
+  | openssl dgst -sha384 -binary | openssl base64 -A
+```
+
 ---
 
 ## Backend Integration (recommended for public sites)
@@ -78,7 +127,10 @@ This token can *only* create issues on that one repo. It can't read your code, p
 Token stays on your server. The widget POSTs JSON to a route on your app, your app runs `gh issue create`. No token in the browser, no extra process.
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@main/issue-reporter.js"></script>
+<script
+  src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"
+  integrity="sha384-txgHnE0+4iRNM0HAWBTP6Eln2q4AyZ+hNLyPxckOUmUUtZaFAuegO/p7yn6pXwUN"
+  crossorigin="anonymous"></script>
 <script>
   IssueReporter.init({ endpoint: "/api/report", projectName: "My App" });
 </script>
@@ -111,6 +163,17 @@ And returns:
 ```
 
 Build the issue body from those fields so it matches what the direct GitHub mode produces. Pick your framework:
+
+> [!IMPORTANT]
+> **The snippets below are illustrative — they do the core body-building and `gh` invocation, nothing more.** For production, use [`server.py`](server.py) in this repo (or port these safeguards into your app):
+>
+> - Rate-limit per client IP (the reference implementation does 5/min)
+> - Validate `type` / `severity` against a closed allowlist; fall back silently
+> - Strip markdown injection (`![x](url)`, `[x](url)`) from metadata fields
+> - Cap field lengths (description 5000, URL 2000, metadata 500)
+> - Reject URLs that aren't `http://` / `https://` (no `javascript:` / `data:` schemes)
+> - Restrict CORS `Access-Control-Allow-Origin` to your site(s) — **never `*` in production if you also require a Bearer token**
+> - Set a `subprocess` timeout on the `gh` call (15s is a reasonable default)
 
 <details>
 <summary><strong>FastAPI</strong></summary>
@@ -300,7 +363,10 @@ For a more complete backend with rate limiting, CORS, labels, and conventional-c
 The widget works with any GitHub-compatible instance. Pass `apiUrl` in the `github` config to target on-prem or alternative deployments:
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@main/issue-reporter.js"></script>
+<script
+  src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"
+  integrity="sha384-txgHnE0+4iRNM0HAWBTP6Eln2q4AyZ+hNLyPxckOUmUUtZaFAuegO/p7yn6pXwUN"
+  crossorigin="anonymous"></script>
 <script>
   IssueReporter.init({
     github: {
@@ -333,7 +399,10 @@ The widget works with any GitHub-compatible instance. Pass `apiUrl` in the `gith
 ## Widget Options
 
 ```html
-<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@main/issue-reporter.js"></script>
+<script
+  src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"
+  integrity="sha384-txgHnE0+4iRNM0HAWBTP6Eln2q4AyZ+hNLyPxckOUmUUtZaFAuegO/p7yn6pXwUN"
+  crossorigin="anonymous"></script>
 <script>
   IssueReporter.init({
     // --- Pick one mode ---
@@ -387,7 +456,7 @@ Create issues from the terminal — no widget needed.
 ### Bash
 
 ```bash
-curl -O https://raw.githubusercontent.com/rayketcham-lab/issue-reporter/main/issue-reporter.sh
+curl -O https://raw.githubusercontent.com/rayketcham-lab/issue-reporter/v2.2.0/issue-reporter.sh
 chmod +x issue-reporter.sh
 
 ./issue-reporter.sh                                    # Interactive
@@ -400,7 +469,7 @@ tail -20 error.log | ./issue-reporter.sh -t bug -s high  # Pipe from logs
 ### Python
 
 ```bash
-curl -O https://raw.githubusercontent.com/rayketcham-lab/issue-reporter/main/issue_reporter.py
+curl -O https://raw.githubusercontent.com/rayketcham-lab/issue-reporter/v2.2.0/issue_reporter.py
 
 python issue_reporter.py "The save button is broken"
 python issue_reporter.py --type feature "Add export button"
@@ -437,6 +506,14 @@ Browser widget ──→ Your backend route ──→ gh issue create ──→ 
        or
 CLI (bash/python) ──→ gh issue create ──→ GitHub Issues
 ```
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for the disclosure policy and [Threat Model](#threat-model) above for the trust model of each deployment mode.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run tests, lint, and submit changes.
 
 ## License
 
