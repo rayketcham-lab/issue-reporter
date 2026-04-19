@@ -7,6 +7,27 @@ on:
     branches: [main]
 
 jobs:
+  lint-python:
+    name: "Lint — ruff"
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run ruff
+        run: |
+          python3 -m venv .venv
+          .venv/bin/python -m pip install ruff
+          .venv/bin/python -m ruff check .
+
+  lint-shell:
+    name: "Lint — shellcheck"
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run shellcheck
+        run: shellcheck issue-reporter.sh
+
   test-ubuntu-postgres:
     name: "Test — Ubuntu2 (postgres)"
     runs-on: [self-hosted, Linux, X64, postgres]

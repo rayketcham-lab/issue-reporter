@@ -267,7 +267,7 @@ def _interactive_report(reporter: IssueReporter) -> str | None:
                 context[key] = value
 
     # Step 5: Confirm
-    print(f"\n--- Preview ---")
+    print("\n--- Preview ---")
     print(f"Type: {issue_type} | Severity: {severity}")
     print(f"Description: {description[:100]}{'...' if len(description) > 100 else ''}")
     if context:
