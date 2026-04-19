@@ -87,6 +87,11 @@ ${description}
 - **Type:** ${issue_type}
 - **Severity:** ${severity}"
 
+    if [[ -n "$PROJECT_NAME" ]]; then
+        _BODY="${_BODY}
+- **Project:** ${PROJECT_NAME}"
+    fi
+
     _LABELS=$(labels_for_type "$issue_type")
     if [[ "$severity" == "critical" ]]; then
         _LABELS="${_LABELS},critical"
@@ -244,6 +249,10 @@ done
 
 # Main
 check_deps
+
+if [[ "$REPO_DIR" != "." ]]; then
+    cd "$REPO_DIR" || die "Cannot cd to REPO_DIR: $REPO_DIR"
+fi
 
 if [[ -n "$DESCRIPTION" ]]; then
     do_report "$DESCRIPTION"

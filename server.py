@@ -408,8 +408,8 @@ def main() -> None:
     server = HTTPServer(("0.0.0.0", args.port), handler)
 
     print(f"issue-reporter server listening on http://0.0.0.0:{args.port}")
-    print(f"  POST /api/report  — create issues")
-    print(f"  GET  /health      — health check")
+    print("  POST /api/report  — create issues")
+    print("  GET  /health      — health check")
     print(f"  Repo: {args.repo}")
     print(f"  CORS: {args.allowed_origins}")
     if args.token:
