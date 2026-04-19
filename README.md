@@ -1,6 +1,6 @@
 # issue-reporter
 
-![Version](https://img.shields.io/badge/version-2.2.0-blue) ![License](https://img.shields.io/badge/license-MIT-green) ![Dependencies](https://img.shields.io/badge/dependencies-none-brightgreen) ![Size](https://img.shields.io/badge/size-~67kb-lightgrey) ![GitHub Stars](https://img.shields.io/github/stars/rayketcham-lab/issue-reporter?style=social)
+![Version](https://img.shields.io/badge/version-2.2.0-blue) ![License](https://img.shields.io/badge/license-Apache%202.0-blue) ![Dependencies](https://img.shields.io/badge/dependencies-none-brightgreen) ![Size](https://img.shields.io/badge/size-~67kb-lightgrey) ![GitHub Stars](https://img.shields.io/github/stars/rayketcham-lab/issue-reporter?style=social)
 
 Drop a feedback button on any web page. Reports become GitHub issues.
 
@@ -517,4 +517,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run tests, lint, and submit ch
 
 ## License
 
-MIT
+Apache-2.0
