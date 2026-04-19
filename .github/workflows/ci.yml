@@ -28,9 +28,9 @@ jobs:
       - name: Run shellcheck
         run: shellcheck issue-reporter.sh
 
-  test-ubuntu-postgres:
-    name: "Test — Ubuntu2 (postgres)"
-    runs-on: [self-hosted, Linux, X64, postgres]
+  test-ubuntu2:
+    name: "Test — Ubuntu2"
+    runs-on: [self-hosted, Linux, X64, ubuntu2]
     steps:
       - uses: actions/checkout@v4
 
