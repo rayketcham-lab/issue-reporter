@@ -1,11 +1,8 @@
 # Global owner — required reviewer on all changes.
 *                           @rayketcham-lab
 
-# Security-sensitive code: widget, backend, CLIs.
+# Widget source.
 /issue-reporter.js          @rayketcham-lab
-/server.py                  @rayketcham-lab
-/issue_reporter.py          @rayketcham-lab
-/issue-reporter.sh          @rayketcham-lab
 
 # CI / release / security policy.
 /.github/                   @rayketcham-lab
