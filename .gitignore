@@ -2,15 +2,6 @@
 issue-reporter.json
 issue-reporter.conf
 
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.egg-info/
-dist/
-build/
-.eggs/
-
 # IDE
 .vscode/
 .idea/

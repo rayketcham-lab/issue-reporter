@@ -14,18 +14,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   use `gh issue create` directly if you need terminal access.
 - **Reference backend** (`server.py`) and pip packaging (`pyproject.toml`) —
   the widget now ships only as a browser-embedded JS file.
-- **Backend Integration** section from the README and docs site — the
-  `endpoint:` init option remains in the widget as an undocumented escape
-  hatch for anyone running a custom backend.
+- **Backend Integration** section from the README and docs site. The
+  `endpoint:` init option remains in the widget source as an undocumented
+  escape hatch for custom backends — it is not surfaced in JSDoc, error
+  messages, or either doc site.
 - Python test suite (`tests/`) and associated CI jobs (`ruff`, `shellcheck`,
   `pytest` on ubuntu/postgres/windows runners).
 - `python` from CodeQL matrix, `pip` ecosystem from dependabot.
 
 ### Changed
-- README + docs site pinned to `@v2.3.0` with refreshed SRI hashes.
+- Widget header and JSDoc relicensed in-file from MIT to Apache-2.0 (the
+  `LICENSE` file has been Apache-2.0 since 2.2.x; the in-file header was
+  stale).
+- README and docs site both pin `@v2.3.0` with matching SRI hashes
+  (`sha384-0mXihXV5Gt…`). The docs site previously shipped `@main` without
+  SRI; the README previously shipped a stale SRI from a prior build.
 - Threat Model simplified: single deployment mode (direct GitHub API).
 - `SECURITY.md` scope narrowed to widget + CI/release workflows.
 - `CONTRIBUTING.md` rewritten for a JS-only project — no Python tooling.
+- `.gitignore` trimmed to JS/OS/IDE entries (Python venv/egg entries removed).
 
 ## [Prior] Added in 2.2.x
 - `SECURITY.md` with private vulnerability disclosure policy.

@@ -819,7 +819,7 @@ tr:last-child td { border-bottom: none; }
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.2 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.75.08-.73.08-.73 1.2.08 1.84 1.24 1.84 1.24 1.07 1.83 2.81 1.3 3.5 1 .11-.78.42-1.3.76-1.6-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 016.02 0c2.28-1.55 3.28-1.23 3.28-1.23.66 1.66.26 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.42.36.81 1.1.81 2.22v3.29c0 .32.22.7.82.58A12.01 12.01 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
         GitHub
       </a>
-      <a href="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@main/issue-reporter.js" class="btn btn-secondary" target="_blank" rel="noopener">
+      <a href="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.3.0/issue-reporter.js" class="btn btn-secondary" target="_blank" rel="noopener">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         CDN
       </a>
@@ -870,7 +870,7 @@ tr:last-child td { border-bottom: none; }
             <pre class="demo-result-body" id="demo-result-body"></pre>
           </div>
           <details class="demo-payload">
-            <summary>Raw JSON payload (what POSTs to your backend in <code>endpoint</code> mode)</summary>
+            <summary>Raw JSON payload (the data structure the widget builds before POSTing to GitHub)</summary>
             <pre><code class="language-json" id="demo-result-json"></code></pre>
           </details>
         </div>
@@ -937,7 +937,7 @@ tr:last-child td { border-bottom: none; }
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
           </div>
           <h4>Direct GitHub API</h4>
-          <p>Or use your own backend</p>
+          <p>No backend, no proxy, no glue code</p>
         </div>
       </div>
     </section>
@@ -955,7 +955,10 @@ tr:last-child td { border-bottom: none; }
             Copy
           </button>
         </div>
-        <pre><code class="language-html">&lt;script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@main/issue-reporter.js"&gt;&lt;/script&gt;
+        <pre><code class="language-html">&lt;script
+  src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.3.0/issue-reporter.js"
+  integrity="sha384-0mXihXV5GtYbZBfbGYg1BaV6HZHSK9BrvXQHDLm0x6Yl9J5x+7BR26wI3MPzCQgX"
+  crossorigin="anonymous"&gt;&lt;/script&gt;
 &lt;script&gt;
   IssueReporter.init({
     github: {
@@ -998,7 +1001,10 @@ tr:last-child td { border-bottom: none; }
             Copy
           </button>
         </div>
-        <pre><code class="language-html">&lt;script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@main/issue-reporter.js"&gt;&lt;/script&gt;
+        <pre><code class="language-html">&lt;script
+  src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.3.0/issue-reporter.js"
+  integrity="sha384-0mXihXV5GtYbZBfbGYg1BaV6HZHSK9BrvXQHDLm0x6Yl9J5x+7BR26wI3MPzCQgX"
+  crossorigin="anonymous"&gt;&lt;/script&gt;
 &lt;script&gt;
   IssueReporter.init({
     github: {
@@ -1062,7 +1068,10 @@ tr:last-child td { border-bottom: none; }
             Copy
           </button>
         </div>
-        <pre><code class="language-html">&lt;script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@main/issue-reporter.js"&gt;&lt;/script&gt;
+        <pre><code class="language-html">&lt;script
+  src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.3.0/issue-reporter.js"
+  integrity="sha384-0mXihXV5GtYbZBfbGYg1BaV6HZHSK9BrvXQHDLm0x6Yl9J5x+7BR26wI3MPzCQgX"
+  crossorigin="anonymous"&gt;&lt;/script&gt;
 &lt;script&gt;
   IssueReporter.init({
     github: {
@@ -1154,7 +1163,7 @@ IssueReporter.destroy(); // Remove the widget entirely</code></pre>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
 
 <!-- Issue Reporter widget (live demo — intercepted, no real submission) -->
-<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@main/issue-reporter.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.3.0/issue-reporter.js"></script>
 <script>
 (function () {
   var DEMO_ENDPOINT = "/__issue_reporter_demo_submit";

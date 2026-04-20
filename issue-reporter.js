@@ -6,13 +6,12 @@
  *
  * No dependencies. No framework. No build step.
  *
- * Mode 1 — Direct to GitHub (no backend needed):
  *   IssueReporter.init({
  *     github: { repo: "owner/repo", token: "github_pat_xxxx" },
  *     projectName: "My App"
  *   });
  *
- * Mode 1b — GitHub Enterprise Server (on-prem):
+ * GitHub Enterprise Server (on-prem):
  *   IssueReporter.init({
  *     github: {
  *       repo: "org/repo",
@@ -22,13 +21,7 @@
  *     projectName: "My App"
  *   });
  *
- * Mode 2 — Via your backend (one route):
- *   IssueReporter.init({
- *     endpoint: "/api/report",
- *     projectName: "My App"
- *   });
- *
- * @license MIT
+ * @license Apache-2.0
  * @see https://github.com/rayketcham-lab/issue-reporter
  */
 (function () {
@@ -1734,15 +1727,14 @@
      * Initialize the issue reporter widget.
      *
      * @param {Object} options
-     * @param {Object} [options.github] - Direct GitHub mode (no backend needed)
+     * @param {Object} options.github - GitHub repo + token for direct API mode
      * @param {string} options.github.repo - "owner/repo" (e.g. "acme/my-app")
      * @param {string} options.github.token - Fine-grained PAT with Issues read/write
-     * @param {string} [options.endpoint] - Backend URL to POST reports to
+     * @param {string} [options.github.apiUrl] - GHES/GitHub AE API base URL (defaults to github.com)
      * @param {string} [options.projectName] - Project name shown in modal header
      * @param {string} [options.position="bottom-right"] - "bottom-right" or "bottom-left"
      * @param {string} [options.buttonText="Report Issue"] - Floating button text
      * @param {Array}  [options.issueTypes] - Array of {id, label, icon, description, color, showExpected}
-     * @param {string} [options.token] - Auth token for endpoint mode (Bearer header)
      */
     init: function (options) {
       if (this._initialized) {
@@ -1781,7 +1773,8 @@
         }
       } else if (!config.endpoint) {
         console.error(
-          "IssueReporter: provide either github (direct mode) or endpoint (backend mode). " +
+          "IssueReporter: provide a github config. " +
+          'Example: IssueReporter.init({ github: { repo: "owner/repo", token: "github_pat_xxxx" } }). ' +
           "See https://github.com/rayketcham-lab/issue-reporter for setup."
         );
         return;

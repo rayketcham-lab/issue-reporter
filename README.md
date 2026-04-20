@@ -98,7 +98,7 @@ Add two lines to your page. The widget calls the GitHub API directly.
 ```html
 <script
   src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.3.0/issue-reporter.js"
-  integrity="sha384-txgHnE0+4iRNM0HAWBTP6Eln2q4AyZ+hNLyPxckOUmUUtZaFAuegO/p7yn6pXwUN"
+  integrity="sha384-0mXihXV5GtYbZBfbGYg1BaV6HZHSK9BrvXQHDLm0x6Yl9J5x+7BR26wI3MPzCQgX"
   crossorigin="anonymous"></script>
 <script>
   IssueReporter.init({
@@ -175,7 +175,7 @@ The widget works with any GitHub-compatible instance. Pass `apiUrl` in the `gith
 ```html
 <script
   src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.3.0/issue-reporter.js"
-  integrity="sha384-txgHnE0+4iRNM0HAWBTP6Eln2q4AyZ+hNLyPxckOUmUUtZaFAuegO/p7yn6pXwUN"
+  integrity="sha384-0mXihXV5GtYbZBfbGYg1BaV6HZHSK9BrvXQHDLm0x6Yl9J5x+7BR26wI3MPzCQgX"
   crossorigin="anonymous"></script>
 <script>
   IssueReporter.init({
@@ -211,7 +211,7 @@ The widget works with any GitHub-compatible instance. Pass `apiUrl` in the `gith
 ```html
 <script
   src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.3.0/issue-reporter.js"
-  integrity="sha384-txgHnE0+4iRNM0HAWBTP6Eln2q4AyZ+hNLyPxckOUmUUtZaFAuegO/p7yn6pXwUN"
+  integrity="sha384-0mXihXV5GtYbZBfbGYg1BaV6HZHSK9BrvXQHDLm0x6Yl9J5x+7BR26wI3MPzCQgX"
   crossorigin="anonymous"></script>
 <script>
   IssueReporter.init({
