@@ -28,13 +28,13 @@
  *     projectName: "My App"
  *   });
  *
- * @license Apache-2.0
+ * @license MIT
  * @see https://github.com/rayketcham-lab/issue-reporter
  */
 (function () {
   "use strict";
 
-  var VERSION = "2.2.0";
+  var VERSION = "2.3.0";
   var REPO_URL = "https://github.com/rayketcham-lab/issue-reporter";
 
   // Guard against double-init
@@ -1774,9 +1774,9 @@
         var host = window.location.hostname;
         if (host !== "localhost" && host !== "127.0.0.1" && host !== "0.0.0.0" && host !== "[::1]") {
           console.warn(
-            "IssueReporter: Direct GitHub mode exposes your PAT in page source. " +
-            "This is fine for internal tools but for public sites, use backend mode instead. " +
-            "See https://github.com/rayketcham-lab/issue-reporter#backend-integration"
+            "IssueReporter: your GitHub PAT is visible in page source. " +
+            "Fine for internal tools and staging; on public sites use a dedicated triage repo. " +
+            "See https://github.com/rayketcham-lab/issue-reporter#threat-model"
           );
         }
       } else if (!config.endpoint) {

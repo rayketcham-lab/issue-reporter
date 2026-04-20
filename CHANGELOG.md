@@ -7,32 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- `SECURITY.md` with private vulnerability disclosure policy.
-- `CONTRIBUTING.md` covering test, lint, and release workflow.
-- Threat Model + Content Security Policy sections in the README.
-- Supply-chain pinning guidance (regenerate SRI on version bump).
-- `.github/dependabot.yml` for weekly GitHub Actions + pip updates.
-- `.github/workflows/codeql.yml` scanning JavaScript + Python.
-- `.github/CODEOWNERS` requiring review on widget/server/workflows.
-- CI jobs for `ruff check` and `shellcheck`.
-- `tests/test_server_http.py` — 34 new HTTP-level tests covering rate-limit,
-  CORS, auth, malformed payloads, sanitizers, and adversarial XSS payloads.
-- `PROJECT_NAME` and `REPO_DIR` config vars are now used by `issue-reporter.sh`.
-- `CHANGELOG.md` tracking user-visible changes.
+## [2.3.0] - 2026-04-19
+
+### Removed
+- **Bash CLI** (`issue-reporter.sh`) and **Python CLI** (`issue_reporter.py`) —
+  use `gh issue create` directly if you need terminal access.
+- **Reference backend** (`server.py`) and pip packaging (`pyproject.toml`) —
+  the widget now ships only as a browser-embedded JS file.
+- **Backend Integration** section from the README and docs site — the
+  `endpoint:` init option remains in the widget as an undocumented escape
+  hatch for anyone running a custom backend.
+- Python test suite (`tests/`) and associated CI jobs (`ruff`, `shellcheck`,
+  `pytest` on ubuntu/postgres/windows runners).
+- `python` from CodeQL matrix, `pip` ecosystem from dependabot.
 
 ### Changed
-- README script tags pinned back to `@v2.2.0` with `integrity=sha384-...` +
-  `crossorigin="anonymous"` (reverts the `@main` change from #11).
-- CLI `curl` examples pinned to the `v2.2.0` tag.
-- README framework snippets now link to `server.py` as the production reference
-  and list the must-have safeguards.
+- README + docs site pinned to `@v2.3.0` with refreshed SRI hashes.
+- Threat Model simplified: single deployment mode (direct GitHub API).
+- `SECURITY.md` scope narrowed to widget + CI/release workflows.
+- `CONTRIBUTING.md` rewritten for a JS-only project — no Python tooling.
 
-### Fixed
-- `ruff` F541 in `issue_reporter.py:270`, `server.py:411-412` (f-strings with
-  no placeholders).
-- `shellcheck` SC2034 in `issue-reporter.sh` (`PROJECT_NAME`, `REPO_DIR`
-  declared but unused — now wired up).
+## [Prior] Added in 2.2.x
+- `SECURITY.md` with private vulnerability disclosure policy.
+- `CONTRIBUTING.md` covering release workflow.
+- Threat Model + Content Security Policy sections in the README.
+- Supply-chain pinning guidance (regenerate SRI on version bump).
+- `.github/dependabot.yml` for weekly GitHub Actions updates.
+- `.github/workflows/codeql.yml` scanning JavaScript.
+- `.github/CODEOWNERS` requiring review on widget/workflows.
+- `CHANGELOG.md` tracking user-visible changes.
 
 ## [2.2.0] - 2026-03-12
 

@@ -1,28 +1,74 @@
 # issue-reporter
 
-![Version](https://img.shields.io/badge/version-2.2.0-blue) ![License](https://img.shields.io/badge/license-Apache%202.0-blue) ![Dependencies](https://img.shields.io/badge/dependencies-none-brightgreen) ![Size](https://img.shields.io/badge/size-~67kb-lightgrey) ![GitHub Stars](https://img.shields.io/github/stars/rayketcham-lab/issue-reporter?style=social)
+![Version](https://img.shields.io/badge/version-2.3.0-blue) ![License](https://img.shields.io/badge/license-Apache%202.0-blue) ![Dependencies](https://img.shields.io/badge/dependencies-none-brightgreen) ![Size](https://img.shields.io/badge/size-~67kb-lightgrey) ![GitHub Stars](https://img.shields.io/github/stars/rayketcham-lab/issue-reporter?style=social)
 
 Drop a feedback button on any web page. Reports become GitHub issues.
 
 No backend required. No database. No API keys beyond a GitHub token scoped to issues.
 
+## Demo
+
+> [!TIP]
+> **Try it live** at [rayketcham-lab.github.io/issue-reporter](https://rayketcham-lab.github.io/issue-reporter/#demo) — click through the wizard, see the exact issue body it would produce. Nothing is filed.
+
+A bug reported through the widget produces this GitHub issue, verbatim:
+
+**Title:** `fix: Checkout submit button does nothing when clicked.`
+**Labels:** `bug`
+
+````markdown
+## Summary
+
+Checkout submit button does nothing when clicked.
+
+## Context
+
+- **Page:** https://shop.example.com/checkout
+- **Page Title:** Checkout — Your Cart
+- **Section:** Checkout form
+- **Element:** button#submit-order
+
+## Expected Behavior
+
+Clicking Submit should POST the order and redirect to the confirmation page.
+
+## Console Errors
+
+```
+[error] Uncaught TypeError: Cannot read properties of null (reading 'submit')
+```
+
+## Recent API Calls
+
+```
+200 https://shop.example.com/api/cart
+```
+
+## Metadata
+
+- **Type:** bug
+- **Severity:** high
+- **Project:** Example Shop
+
+---
+*Reported via [issue-reporter](https://github.com/rayketcham-lab/issue-reporter) on 2026-04-20 14:32 UTC*
+````
+
+No screenshot. No GIF. That's the real output — every field above is collected automatically or filled in through three wizard steps.
+
 ## Table of Contents
 
+- [Demo](#demo)
 - [Features](#features)
-- [Quick Start — Pure HTML (no backend)](#quick-start--pure-html-no-backend)
+- [Quick Start](#quick-start)
   - [Creating the token](#creating-the-token)
   - [Threat Model](#threat-model)
   - [Content Security Policy](#content-security-policy)
   - [Supply-chain pinning](#supply-chain-pinning)
-- [Backend Integration (recommended for public sites)](#backend-integration-recommended-for-public-sites)
 - [GitHub Enterprise & Multi-Flavor Support](#github-enterprise--multi-flavor-support)
 - [Widget Options](#widget-options)
   - [Programmatic control](#programmatic-control)
   - [Self-hosting the JS](#self-hosting-the-js)
-- [CLI Usage](#cli-usage)
-  - [Bash](#bash)
-  - [Python](#python)
-  - [pip install](#pip-install)
 - [How It Works](#how-it-works)
 - [Security](#security)
 - [Contributing](#contributing)
@@ -39,19 +85,19 @@ No backend required. No database. No API keys beyond a GitHub token scoped to is
 - Severity levels (Low / Medium / High / Critical)
 - Expected behavior field
 - Review step before submitting
-- Direct GitHub API or backend modes
+- Direct GitHub API — no backend required
 - Zero dependencies, single file
 
 > [!TIP]
 > Two lines of HTML is all you need — no build step, no framework, no dependencies.
 
-## Quick Start — Pure HTML (no backend)
+## Quick Start
 
 Add two lines to your page. The widget calls the GitHub API directly.
 
 ```html
 <script
-  src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"
+  src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.3.0/issue-reporter.js"
   integrity="sha384-txgHnE0+4iRNM0HAWBTP6Eln2q4AyZ+hNLyPxckOUmUUtZaFAuegO/p7yn6pXwUN"
   crossorigin="anonymous"></script>
 <script>
@@ -77,24 +123,23 @@ That's it. A floating "Report Issue" button appears. Click it, fill out the form
 This token can *only* create issues on that one repo. It can't read your code, push commits, or access anything else.
 
 > [!WARNING]
-> **Token visibility tradeoff:** In direct mode the token is visible in your page source. For internal tools or personal projects, that's fine — the worst anyone can do is create spam issues you can delete. For public-facing sites, use **Backend Integration** below so the token never leaves your server.
+> **Token visibility tradeoff:** The widget puts your GitHub token in page source. For internal tools, staging, or personal projects, that's fine — the worst anyone can do is create spam issues you can delete. For public-facing sites, use a dedicated triage repo and accept that anyone can spam issues up to the PAT's hourly budget.
 
 ### Threat Model
 
 Read this before you put the widget on a public site.
 
-| Mode       | Where the token lives | Who can see it                                                                 | Rate-limit enforcement                  | Recommended for            |
-| ---------- | --------------------- | ------------------------------------------------------------------------------ | --------------------------------------- | -------------------------- |
-| Direct     | Browser (page source) | Anyone who views source, any browser extension, any third-party script on the page (analytics, tag managers, ad SDKs) | None in browser — only GitHub's PAT limit (5000 req/hr) | Intranet, staging, demos   |
-| Backend    | Server process        | Server operators only                                                          | Your server (the reference `server.py` does 5/min/IP) | Public-facing sites        |
+| Where the token lives | Who can see it | Rate-limit enforcement | Recommended for |
+| --------------------- | -------------- | ---------------------- | --------------- |
+| Browser (page source) | Anyone who views source, any browser extension, any third-party script on the page (analytics, tag managers, ad SDKs) | None in browser — only GitHub's PAT limit (5000 req/hr) | Intranet, staging, demos, dedicated triage repo |
 
-**If you ship direct mode in production:**
+**If you ship in production:**
 
 - **Scope the token to a dedicated triage repo**, not your production code repo. A leaked PAT that can only file issues to `your-org/feedback-intake` is a much smaller blast radius than one pointing at `your-org/main-app`.
 - **Use a fine-grained token** with `Issues: read/write` only. No other permission.
 - **Rotate on a schedule** (30 days is a reasonable default) and immediately if you see anomalous issue volume.
 - **Accept that any page visitor can spam issues** up to the PAT's hourly budget. GitHub will throttle before your repo fills up, but you will need to delete/close the garbage.
-- **Third-party scripts can exfiltrate the token.** If your page loads analytics, tag managers, chat widgets, or ad SDKs, those scripts run in the same origin and can read the widget's config. Direct mode is *not* safe when you do not fully trust every script on the page.
+- **Third-party scripts can exfiltrate the token.** If your page loads analytics, tag managers, chat widgets, or ad SDKs, those scripts run in the same origin and can read the widget's config. The widget is *not* safe when you do not fully trust every script on the page.
 
 ### Content Security Policy
 
@@ -122,241 +167,6 @@ curl -sL "https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@<TAG>/issue-
 
 ---
 
-## Backend Integration (recommended for public sites)
-
-Token stays on your server. The widget POSTs JSON to a route on your app, your app runs `gh issue create`. No token in the browser, no extra process.
-
-```html
-<script
-  src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"
-  integrity="sha384-txgHnE0+4iRNM0HAWBTP6Eln2q4AyZ+hNLyPxckOUmUUtZaFAuegO/p7yn6pXwUN"
-  crossorigin="anonymous"></script>
-<script>
-  IssueReporter.init({ endpoint: "/api/report", projectName: "My App" });
-</script>
-```
-
-Your backend receives:
-
-```json
-{
-  "type": "bug",
-  "severity": "high",
-  "description": "The save button doesn't work",
-  "expected_behavior": "Should save and show confirmation",
-  "context": null,
-  "project_name": "My App",
-  "page_url": "https://mysite.com/settings",
-  "page_title": "Settings - My App",
-  "page_type": "settings",
-  "section": "Account Settings",
-  "element_text": "<button#save-btn.btn-primary> \"Save Changes\"",
-  "console_errors": "[error] TypeError: Cannot read property 'save' of undefined",
-  "last_api_calls": "500 /api/settings/save\n200 /api/user/me"
-}
-```
-
-And returns:
-
-```json
-{"success": true, "url": "https://github.com/you/repo/issues/42"}
-```
-
-Build the issue body from those fields so it matches what the direct GitHub mode produces. Pick your framework:
-
-> [!IMPORTANT]
-> **The snippets below are illustrative — they do the core body-building and `gh` invocation, nothing more.** For production, use [`server.py`](server.py) in this repo (or port these safeguards into your app):
->
-> - Rate-limit per client IP (the reference implementation does 5/min)
-> - Validate `type` / `severity` against a closed allowlist; fall back silently
-> - Strip markdown injection (`![x](url)`, `[x](url)`) from metadata fields
-> - Cap field lengths (description 5000, URL 2000, metadata 500)
-> - Reject URLs that aren't `http://` / `https://` (no `javascript:` / `data:` schemes)
-> - Restrict CORS `Access-Control-Allow-Origin` to your site(s) — **never `*` in production if you also require a Bearer token**
-> - Set a `subprocess` timeout on the `gh` call (15s is a reasonable default)
-
-<details>
-<summary><strong>FastAPI</strong></summary>
-
-```python
-import asyncio
-from fastapi import FastAPI
-
-app = FastAPI()
-
-def build_body(d: dict) -> str:
-    parts = [f"## Summary\n\n{d['description']}"]
-    ctx = []
-    if d.get("page_url"):     ctx.append(f"- **Page:** {d['page_url']}")
-    if d.get("page_title"):   ctx.append(f"- **Page Title:** {d['page_title']}")
-    if d.get("section"):      ctx.append(f"- **Section:** {d['section']}")
-    if d.get("element_text"): ctx.append(f"- **Element:** {d['element_text']}")
-    if ctx: parts.append("\n## Context\n\n" + "\n".join(ctx))
-    if d.get("expected_behavior"):
-        parts.append(f"\n## Expected Behavior\n\n{d['expected_behavior']}")
-    if d.get("console_errors"):
-        parts.append(f"\n## Console Errors\n\n```\n{d['console_errors']}\n```")
-    if d.get("last_api_calls"):
-        parts.append(f"\n## Recent API Calls\n\n```\n{d['last_api_calls']}\n```")
-    meta = [f"- **Type:** {d.get('type','bug')}", f"- **Severity:** {d.get('severity','medium')}"]
-    if d.get("project_name"): meta.append(f"- **Project:** {d['project_name']}")
-    parts.append("\n## Metadata\n\n" + "\n".join(meta))
-    return "\n".join(parts)
-
-@app.post("/api/report")
-async def report_issue(body: dict):
-    desc = (body.get("description") or "").strip()
-    if not desc:
-        return {"success": False, "error": "description is required"}
-    title = f"{body.get('type', 'bug')}: {desc[:60]}"
-    issue_body = build_body(body)
-    proc = await asyncio.create_subprocess_exec(
-        "gh", "issue", "create", "--title", title, "--body", issue_body,
-        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
-    )
-    stdout, _ = await proc.communicate()
-    url = stdout.decode().strip() if proc.returncode == 0 else None
-    if url:
-        return {"success": True, "url": url}
-    return {"success": False, "error": "gh issue create failed"}
-```
-</details>
-
-<details>
-<summary><strong>Flask</strong></summary>
-
-```python
-import subprocess
-from flask import Flask, request, jsonify
-
-app = Flask(__name__)
-
-def build_body(d: dict) -> str:
-    parts = [f"## Summary\n\n{d['description']}"]
-    ctx = []
-    if d.get("page_url"):     ctx.append(f"- **Page:** {d['page_url']}")
-    if d.get("page_title"):   ctx.append(f"- **Page Title:** {d['page_title']}")
-    if d.get("section"):      ctx.append(f"- **Section:** {d['section']}")
-    if d.get("element_text"): ctx.append(f"- **Element:** {d['element_text']}")
-    if ctx: parts.append("\n## Context\n\n" + "\n".join(ctx))
-    if d.get("expected_behavior"):
-        parts.append(f"\n## Expected Behavior\n\n{d['expected_behavior']}")
-    if d.get("console_errors"):
-        parts.append(f"\n## Console Errors\n\n```\n{d['console_errors']}\n```")
-    if d.get("last_api_calls"):
-        parts.append(f"\n## Recent API Calls\n\n```\n{d['last_api_calls']}\n```")
-    meta = [f"- **Type:** {d.get('type','bug')}", f"- **Severity:** {d.get('severity','medium')}"]
-    if d.get("project_name"): meta.append(f"- **Project:** {d['project_name']}")
-    parts.append("\n## Metadata\n\n" + "\n".join(meta))
-    return "\n".join(parts)
-
-@app.post("/api/report")
-def report_issue():
-    data = request.get_json()
-    desc = (data.get("description") or "").strip()
-    if not desc:
-        return jsonify(success=False, error="description is required"), 400
-    title = f"{data.get('type', 'bug')}: {desc[:60]}"
-    body = build_body(data)
-    result = subprocess.run(
-        ["gh", "issue", "create", "--title", title, "--body", body],
-        capture_output=True, text=True, timeout=15,
-    )
-    if result.returncode == 0:
-        return jsonify(success=True, url=result.stdout.strip())
-    return jsonify(success=False, error="gh issue create failed"), 500
-```
-</details>
-
-<details>
-<summary><strong>Express</strong></summary>
-
-```js
-const { execFile } = require("child_process");
-const app = require("express")();
-app.use(require("express").json());
-
-function buildBody(d) {
-  const parts = [`## Summary\n\n${d.description}`];
-  const ctx = [];
-  if (d.page_url)     ctx.push(`- **Page:** ${d.page_url}`);
-  if (d.page_title)   ctx.push(`- **Page Title:** ${d.page_title}`);
-  if (d.section)      ctx.push(`- **Section:** ${d.section}`);
-  if (d.element_text) ctx.push(`- **Element:** ${d.element_text}`);
-  if (ctx.length) parts.push("\n## Context\n\n" + ctx.join("\n"));
-  if (d.expected_behavior) parts.push(`\n## Expected Behavior\n\n${d.expected_behavior}`);
-  if (d.console_errors) parts.push(`\n## Console Errors\n\n\`\`\`\n${d.console_errors}\n\`\`\``);
-  if (d.last_api_calls) parts.push(`\n## Recent API Calls\n\n\`\`\`\n${d.last_api_calls}\n\`\`\``);
-  const meta = [`- **Type:** ${d.type || "bug"}`, `- **Severity:** ${d.severity || "medium"}`];
-  if (d.project_name) meta.push(`- **Project:** ${d.project_name}`);
-  parts.push("\n## Metadata\n\n" + meta.join("\n"));
-  return parts.join("\n");
-}
-
-app.post("/api/report", (req, res) => {
-  const desc = (req.body.description || "").trim();
-  if (!desc) return res.json({ success: false, error: "description is required" });
-  const title = `${req.body.type || "bug"}: ${desc.slice(0, 60)}`;
-  const body = buildBody(req.body);
-  execFile("gh", ["issue", "create", "--title", title, "--body", body], (err, stdout) => {
-    if (err) return res.json({ success: false, error: "gh issue create failed" });
-    res.json({ success: true, url: stdout.trim() });
-  });
-});
-```
-</details>
-
-<details>
-<summary><strong>Django</strong></summary>
-
-```python
-import json, subprocess
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-
-def build_body(d: dict) -> str:
-    parts = [f"## Summary\n\n{d['description']}"]
-    ctx = []
-    if d.get("page_url"):     ctx.append(f"- **Page:** {d['page_url']}")
-    if d.get("page_title"):   ctx.append(f"- **Page Title:** {d['page_title']}")
-    if d.get("section"):      ctx.append(f"- **Section:** {d['section']}")
-    if d.get("element_text"): ctx.append(f"- **Element:** {d['element_text']}")
-    if ctx: parts.append("\n## Context\n\n" + "\n".join(ctx))
-    if d.get("expected_behavior"):
-        parts.append(f"\n## Expected Behavior\n\n{d['expected_behavior']}")
-    if d.get("console_errors"):
-        parts.append(f"\n## Console Errors\n\n```\n{d['console_errors']}\n```")
-    if d.get("last_api_calls"):
-        parts.append(f"\n## Recent API Calls\n\n```\n{d['last_api_calls']}\n```")
-    meta = [f"- **Type:** {d.get('type','bug')}", f"- **Severity:** {d.get('severity','medium')}"]
-    if d.get("project_name"): meta.append(f"- **Project:** {d['project_name']}")
-    parts.append("\n## Metadata\n\n" + "\n".join(meta))
-    return "\n".join(parts)
-
-@csrf_exempt
-def report_issue(request):
-    data = json.loads(request.body)
-    desc = (data.get("description") or "").strip()
-    if not desc:
-        return JsonResponse({"success": False, "error": "description is required"}, status=400)
-    title = f"{data.get('type', 'bug')}: {desc[:60]}"
-    body = build_body(data)
-    result = subprocess.run(
-        ["gh", "issue", "create", "--title", title, "--body", body],
-        capture_output=True, text=True, timeout=15,
-    )
-    if result.returncode == 0:
-        return JsonResponse({"success": True, "url": result.stdout.strip()})
-    return JsonResponse({"success": False, "error": "gh issue create failed"}, status=500)
-```
-</details>
-
-> [!IMPORTANT]
-> Backend mode requires the `gh` CLI installed and authenticated on your server (`sudo apt install gh && gh auth login`).
-
-For a more complete backend with rate limiting, CORS, labels, and conventional-commit prefixes, see `server.py` in this repo.
-
----
 
 ## GitHub Enterprise & Multi-Flavor Support
 
@@ -364,7 +174,7 @@ The widget works with any GitHub-compatible instance. Pass `apiUrl` in the `gith
 
 ```html
 <script
-  src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"
+  src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.3.0/issue-reporter.js"
   integrity="sha384-txgHnE0+4iRNM0HAWBTP6Eln2q4AyZ+hNLyPxckOUmUUtZaFAuegO/p7yn6pXwUN"
   crossorigin="anonymous"></script>
 <script>
@@ -400,24 +210,21 @@ The widget works with any GitHub-compatible instance. Pass `apiUrl` in the `gith
 
 ```html
 <script
-  src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.2.0/issue-reporter.js"
+  src="https://cdn.jsdelivr.net/gh/rayketcham-lab/issue-reporter@v2.3.0/issue-reporter.js"
   integrity="sha384-txgHnE0+4iRNM0HAWBTP6Eln2q4AyZ+hNLyPxckOUmUUtZaFAuegO/p7yn6pXwUN"
   crossorigin="anonymous"></script>
 <script>
   IssueReporter.init({
-    // --- Pick one mode ---
     github: {
       repo: "owner/repo",
       token: "github_pat_xxxx",
       apiUrl: "https://ghes.example.com/api/v3"  // optional — for GHES/GitHub AE
     },
-    // endpoint: "/api/report",                    // backend mode (alternative)
 
     // --- Optional ---
     projectName: "My App",
     position: "bottom-right",             // or "bottom-left"
     buttonText: "Report Issue",
-    token: "your-secret-token",           // backend mode only — sent as Bearer header
     issueTypes: [
       { id: "bug",             label: "Bug Report" },
       { id: "data_issue",      label: "Data Issue" },
@@ -442,78 +249,28 @@ IssueReporter.destroy(); // Remove the widget entirely
 ### Self-hosting the JS
 
 ```bash
-curl -O https://raw.githubusercontent.com/rayketcham-lab/issue-reporter/v2.2.0/issue-reporter.js
+curl -O https://raw.githubusercontent.com/rayketcham-lab/issue-reporter/v2.3.0/issue-reporter.js
 ```
 
 No build step. No dependencies. One file.
 
 ---
 
-## CLI Usage
-
-Create issues from the terminal — no widget needed.
-
-### Bash
-
-```bash
-curl -O https://raw.githubusercontent.com/rayketcham-lab/issue-reporter/v2.2.0/issue-reporter.sh
-chmod +x issue-reporter.sh
-
-./issue-reporter.sh                                    # Interactive
-./issue-reporter.sh "The login button doesn't work"    # One-liner
-./issue-reporter.sh -t feature -s low "Add dark mode"  # Type + severity
-tail -20 error.log | ./issue-reporter.sh -t bug -s high  # Pipe from logs
-./issue-reporter.sh --dry-run "Test issue"             # Preview only
-```
-
-### Python
-
-```bash
-curl -O https://raw.githubusercontent.com/rayketcham-lab/issue-reporter/v2.2.0/issue_reporter.py
-
-python issue_reporter.py "The save button is broken"
-python issue_reporter.py --type feature "Add export button"
-python issue_reporter.py --dry-run "Test"
-```
-
-```python
-# As a library
-from issue_reporter import IssueReporter
-
-reporter = IssueReporter(project_name="My App")
-url = reporter.report("The save button doesn't work", issue_type="bug")
-print(url)  # https://github.com/you/repo/issues/42
-```
-
-### pip install
-
-```bash
-pip install git+https://github.com/rayketcham-lab/issue-reporter.git
-```
-
-CLI requires `gh` CLI installed and authenticated.
-
----
-
 ## How It Works
 
 ```
-Browser widget ──→ GitHub API directly (no backend)
+Browser widget ──→ GitHub API directly ──→ GitHub Issues
        or
-Browser widget ──→ GitHub Enterprise API (on-prem, via apiUrl)
-       or
-Browser widget ──→ Your backend route ──→ gh issue create ──→ GitHub Issues
-       or
-CLI (bash/python) ──→ gh issue create ──→ GitHub Issues
+Browser widget ──→ GitHub Enterprise API (on-prem, via apiUrl) ──→ Issues
 ```
 
 ## Security
 
-See [SECURITY.md](SECURITY.md) for the disclosure policy and [Threat Model](#threat-model) above for the trust model of each deployment mode.
+See [SECURITY.md](SECURITY.md) for the disclosure policy and [Threat Model](#threat-model) above for the trust model.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for how to run tests, lint, and submit changes.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to submit changes.
 
 ## License
 

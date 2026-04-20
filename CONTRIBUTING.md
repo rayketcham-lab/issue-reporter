@@ -1,41 +1,20 @@
 # Contributing
 
 Thanks for your interest in contributing. This project is intentionally small:
-zero-dependency JS widget, one Python reference server, two CLIs. Keep PRs
-focused and the surface area tight.
+a zero-dependency JS widget in a single file. Keep PRs focused and the surface
+area tight.
 
 ## Prerequisites
 
-- Python **3.12+** (3.10+ may work for `server.py`, 3.12 is what CI runs)
-- [`gh`](https://cli.github.com) authenticated (`gh auth login`) — required by
-  the CLIs and `server.py`
-- [`ruff`](https://docs.astral.sh/ruff/) for linting Python
-- [`shellcheck`](https://www.shellcheck.net/) for the bash CLI
+- A modern browser to open `docs/index.html` locally and exercise the widget.
+- [`gh`](https://cli.github.com) authenticated — only needed if you want to
+  file issues against a real repo while testing.
 
-## Running the test suite
+## Testing changes
 
-```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install pytest
-.venv/bin/python -m pytest tests/ -v
-```
-
-The suite runs in under 15 seconds and covers:
-
-- Validation logic (`test_input_validation.py`)
-- HTTP behaviour of `server.py` (`test_server_http.py`) — rate-limit, CORS,
-  auth, malformed payloads, sanitizers, adversarial XSS payloads
-
-## Linting
-
-Before you push, run:
-
-```bash
-ruff check .
-shellcheck issue-reporter.sh
-```
-
-Both are enforced by CI and must pass.
+The widget has no build step. Open `docs/index.html` in a browser, click the
+demo button, and walk the wizard. CodeQL runs in CI over `issue-reporter.js`;
+no local lint is enforced.
 
 ## Commit messages
 
@@ -45,15 +24,14 @@ the change is non-obvious.
 
 ## What we accept
 
-- Bug fixes with a regression test
+- Bug fixes in the widget
 - New features that keep the zero-dependency, single-file-widget philosophy
 - Documentation improvements
-- Hardening (security, validation, error handling) with tests
+- Hardening (security, validation, error handling)
 
 ## What we're careful about
 
 - **No new runtime dependencies** in `issue-reporter.js`
-- **No new Python packages** in `server.py` (stdlib only)
 - **Breaking changes to `IssueReporter.init()`** require a major-version bump
   and a documented migration path
 
@@ -64,7 +42,7 @@ Do not open public issues for security vulnerabilities. See
 
 ## Releasing
 
-1. Bump the version in `pyproject.toml` and the README badge.
+1. Bump the version in the README badge and `<script>` tag examples.
 2. Update `CHANGELOG.md`.
 3. Tag `vX.Y.Z` on `main`.
 4. Regenerate the SRI hash in every README `<script>` example:

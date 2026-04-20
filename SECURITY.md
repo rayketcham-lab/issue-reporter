@@ -7,8 +7,8 @@ receive backports.
 
 | Version | Supported |
 | ------- | --------- |
-| 2.2.x   | Yes       |
-| < 2.2   | No        |
+| 2.3.x   | Yes       |
+| < 2.3   | No        |
 
 ## Reporting a Vulnerability
 
@@ -29,14 +29,12 @@ When reporting, include:
 In scope:
 
 - `issue-reporter.js` (embedded widget)
-- `server.py` (reference backend)
-- `issue-reporter.sh`, `issue_reporter.py` (CLIs)
 - CI/release workflows in `.github/workflows/`
 
 Out of scope:
 
 - Vulnerabilities in consumer applications that embed the widget
-- Abuse of a GitHub PAT that the consumer exposed in direct-mode
+- Abuse of a GitHub PAT that the consumer exposed in page source
   (this is a documented tradeoff — see the README "Threat Model" section)
 - Rate-limit exhaustion using a legitimately issued token
 
