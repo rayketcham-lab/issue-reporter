@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate widget + docs integrity
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (full history + tags for SRI verification)
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: JS syntax check (zero-dependency widget)
+        run: node --check issue-reporter.js
+
+      - name: SRI hashes match the pinned release artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=0
+          for f in README.md docs/index.html; do
+            if [[ ! -f "$f" ]]; then echo "::error::$f missing"; status=1; continue; fi
+
+            mapfile -t tags < <(grep -oE 'issue-reporter@[A-Za-z0-9._-]+/issue-reporter\.js' "$f" \
+                                  | sed -E 's#.*@([A-Za-z0-9._-]+)/issue-reporter\.js#\1#' | sort -u)
+            mapfile -t hashes < <(grep -oE 'integrity="sha384-[A-Za-z0-9+/=]+"' "$f" \
+                                  | sed -E 's#integrity="(sha384-[A-Za-z0-9+/=]+)"#\1#' | sort -u)
+
+            if [[ "${#tags[@]}" -ne 1 ]]; then
+              echo "::error file=$f::expected exactly one pinned @tag, found: ${tags[*]:-(none)}"
+              status=1; continue
+            fi
+            if [[ "${#hashes[@]}" -ne 1 ]]; then
+              echo "::error file=$f::expected exactly one integrity hash, found: ${hashes[*]:-(none)}"
+              status=1; continue
+            fi
+
+            tag="${tags[0]}"
+            # The CDN reference MUST be an immutable git tag. A mutable branch (e.g. @main)
+            # would let the documented hash silently drift while CI stays green, defeating SRI.
+            if ! git rev-parse --verify --quiet "refs/tags/${tag}" >/dev/null; then
+              echo "::error file=$f::reference @${tag} is not an immutable git tag (mutable refs are not allowed)"
+              status=1; continue
+            fi
+            if ! git cat-file -e "refs/tags/${tag}:issue-reporter.js" 2>/dev/null; then
+              echo "::error file=$f::tag ${tag} has no issue-reporter.js"
+              status=1; continue
+            fi
+            expect="sha384-$(git show "refs/tags/${tag}:issue-reporter.js" | openssl dgst -sha384 -binary | openssl base64 -A)"
+
+            if [[ "${hashes[0]}" != "$expect" ]]; then
+              echo "::error file=$f::SRI mismatch for @${tag} — documented ${hashes[0]}, artifact is $expect"
+              status=1
+            else
+              echo "OK  $f  @${tag}  ${hashes[0]}"
+            fi
+          done
+          exit "$status"
