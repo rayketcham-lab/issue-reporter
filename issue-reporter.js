@@ -120,6 +120,7 @@
   var backdropEl = null;
   var buttonEl = null;
   var inspectBannerEl = null;
+  var previouslyFocused = null; // element focused before the modal opened, restored on close
 
   // Wizard state
   var state = {
@@ -1375,6 +1376,7 @@
         onClick: function () {
           state.step--;
           renderContent();
+          setTimeout(focusModalStart, 50);
         },
       }, ["\u2190 Back"]);
       footer.appendChild(backBtn);
@@ -1392,13 +1394,7 @@
           if (state.step === 0 && !state.selectedType) return;
           state.step++;
           renderContent();
-          // Focus description on step 1
-          if (state.step === 1) {
-            setTimeout(function () {
-              var desc = document.getElementById("ir-desc");
-              if (desc) desc.focus();
-            }, 50);
-          }
+          setTimeout(focusModalStart, 50);
         },
       }, ["Next \u2192"]);
       if (nextDisabled) {
@@ -1526,7 +1522,9 @@
       children.push(el("button", {
         className: "ir-status-action",
         type: "button",
-        onClick: closeModal,
+        onClick: function () {
+          closeModal();
+        },
       }, "Done"));
       return el("div", { className: "ir-status" }, children);
     }
@@ -1592,7 +1590,11 @@
 
     var closeBtn = el("button", {
       className: "ir-close",
-      onClick: closeModal,
+      // Wrap so the click Event isn't passed as closeModal's `silent` arg,
+      // which would suppress state reset and focus restoration.
+      onClick: function () {
+        closeModal();
+      },
       "aria-label": "Close",
       type: "button",
     }, "\u2715");
@@ -1606,6 +1608,7 @@
       role: "dialog",
       "aria-modal": "true",
       "aria-label": titleText,
+      tabindex: "-1",
     }, [header, content]);
 
     // Prevent clicks inside modal from closing
@@ -1638,8 +1641,90 @@
     state.result = null;
   }
 
+  // -------------------------------------------------------------------------
+  // Focus management (WAI-ARIA dialog pattern)
+  // -------------------------------------------------------------------------
+
+  var FOCUSABLE_SELECTOR =
+    "a[href], button, textarea, input:not([type=hidden]), select, [tabindex]";
+
+  /** Focusable, tabbable descendants of a container, in DOM order. */
+  function getFocusable(container) {
+    if (!container) return [];
+    var nodes = container.querySelectorAll(FOCUSABLE_SELECTOR);
+    var out = [];
+    for (var i = 0; i < nodes.length; i++) {
+      var node = nodes[i];
+      if (node.disabled) continue;
+      if (node.getAttribute("tabindex") === "-1") continue;
+      out.push(node);
+    }
+    return out;
+  }
+
+  /** Whether the modal is currently open and visible. */
+  function isModalOpen() {
+    return !!(backdropEl && backdropEl.classList.contains("ir-backdrop--visible"));
+  }
+
+  /**
+   * Move focus to the first sensible control for the current step.
+   * Prefers the description field (step 1), then the first focusable control
+   * in the content area, then the modal container itself as a last resort.
+   */
+  function focusModalStart() {
+    if (!modalEl) return;
+    var content = document.getElementById("ir-content");
+    var desc = document.getElementById("ir-desc");
+    var target = desc || getFocusable(content)[0] || modalEl;
+    if (target && typeof target.focus === "function") {
+      target.focus();
+    }
+  }
+
+  /**
+   * Make everything outside the dialog inert + hidden from assistive tech
+   * while the modal is open (on=true), and restore prior state on close.
+   * The previous aria-hidden value is stashed in a data attribute so we
+   * don't clobber a page that manages its own aria-hidden.
+   */
+  function setBackgroundInert(on) {
+    if (!document.body) return;
+    // Snapshot of top-level nodes at open time. Nodes the host page appends
+    // while the modal is open are not inerted, but the Tab trap in
+    // handleKeydown still keeps keyboard focus inside the dialog.
+    var children = document.body.children;
+    for (var i = 0; i < children.length; i++) {
+      var node = children[i];
+      if (node === backdropEl) continue;
+      if (on) {
+        if (node.hasAttribute("data-ir-inert")) continue;
+        node.setAttribute("data-ir-inert", node.getAttribute("aria-hidden") || "");
+        node.setAttribute("aria-hidden", "true");
+        node.setAttribute("inert", "");
+      } else {
+        if (!node.hasAttribute("data-ir-inert")) continue;
+        var prev = node.getAttribute("data-ir-inert");
+        node.removeAttribute("inert");
+        if (prev) {
+          node.setAttribute("aria-hidden", prev);
+        } else {
+          node.removeAttribute("aria-hidden");
+        }
+        node.removeAttribute("data-ir-inert");
+      }
+    }
+  }
+
   function openModal() {
     if (inspectActive) return;
+
+    // Remember what had focus so we can restore it on close. Capture only when
+    // not already tracking a target, so re-opening from inspect mode (a silent
+    // close that preserves previouslyFocused) keeps the original trigger element.
+    if (!previouslyFocused) {
+      previouslyFocused = document.activeElement;
+    }
 
     if (!modalEl) {
       createModal();
@@ -1670,13 +1755,12 @@
       buttonEl.style.display = "none";
     }
 
-    // Focus description on step 1
-    if (state.step === 1) {
-      setTimeout(function () {
-        var desc = document.getElementById("ir-desc");
-        if (desc) desc.focus();
-      }, 250);
-    }
+    // Take the rest of the page out of the tab order / accessibility tree.
+    setBackgroundInert(true);
+
+    // Move focus into the dialog for the current step (every step, not just
+    // step 1). Deferred so the freshly-rendered, now-visible content is focusable.
+    setTimeout(focusModalStart, 0);
   }
 
   function closeModal(silent) {
@@ -1687,18 +1771,37 @@
     if (!backdropEl) return;
     backdropEl.classList.remove("ir-backdrop--visible");
 
+    // Restore the rest of the page immediately so it is interactive again
+    // (including during inspect mode, where the modal hides but the page stays live).
+    setBackgroundInert(false);
+
+    var restoreTarget = silent ? null : previouslyFocused;
+
     setTimeout(function () {
+      // If the modal was re-opened during the close animation, abandon teardown
+      // so we don't hide the now-visible dialog or steal focus back.
+      if (isModalOpen()) return;
       if (backdropEl) {
         backdropEl.style.display = "none";
       }
       if (buttonEl && !silent) {
         buttonEl.style.display = "";
       }
+      // Return focus to whatever had it before opening (usually the trigger button),
+      // now that the button is visible again. Guard against a stale/detached node.
+      if (
+        restoreTarget &&
+        typeof restoreTarget.focus === "function" &&
+        document.contains(restoreTarget)
+      ) {
+        restoreTarget.focus();
+      }
     }, 250);
 
     // Reset state on close (unless silent close for inspect mode)
     if (!silent) {
       resetState();
+      previouslyFocused = null;
     }
   }
 
@@ -1710,8 +1813,31 @@
     if (e.key === "Escape") {
       if (inspectActive) {
         cancelInspect();
-      } else if (backdropEl && backdropEl.classList.contains("ir-backdrop--visible")) {
+      } else if (isModalOpen()) {
         closeModal();
+      }
+      return;
+    }
+
+    // Trap Tab within the open dialog so focus can never reach the inert page behind it.
+    if (e.key === "Tab" && !inspectActive && isModalOpen() && modalEl) {
+      var focusable = getFocusable(modalEl);
+      if (focusable.length === 0) {
+        e.preventDefault();
+        modalEl.focus();
+        return;
+      }
+      var first = focusable[0];
+      var last = focusable[focusable.length - 1];
+      var active = document.activeElement;
+      if (e.shiftKey) {
+        if (active === first || !modalEl.contains(active)) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (active === last || !modalEl.contains(active)) {
+        e.preventDefault();
+        first.focus();
       }
     }
   }
@@ -1814,6 +1940,9 @@
       // End inspect mode if active
       endInspect();
 
+      // Undo any background inert-ing before we drop our references to it
+      setBackgroundInert(false);
+
       // Remove DOM elements
       if (buttonEl && buttonEl.parentNode) {
         buttonEl.parentNode.removeChild(buttonEl);
@@ -1838,6 +1967,7 @@
       modalEl = null;
       backdropEl = null;
       inspectBannerEl = null;
+      previouslyFocused = null;
       config = {};
       resetState();
       this._initialized = false;

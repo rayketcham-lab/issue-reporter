@@ -1,0 +1,14 @@
+{
+  "name": "issue-reporter",
+  "version": "2.3.0",
+  "private": true,
+  "description": "Zero-dependency, single-file in-page issue reporter widget.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "scripts": {
+    "test": "node tests/a11y_focus.test.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^24.1.3"
+  }
+}

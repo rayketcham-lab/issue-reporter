@@ -11,3 +11,7 @@ issue-reporter.conf
 # OS
 .DS_Store
 Thumbs.db
+
+# Node (dev/test tooling only — the widget itself ships zero dependencies)
+node_modules/
+package-lock.json
