@@ -6,7 +6,7 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "test": "node tests/a11y_focus.test.mjs"
+    "test": "node tests/a11y_focus.test.mjs && node tests/fetch_capture_redaction.test.mjs"
   },
   "devDependencies": {
     "jsdom": "^24.1.3"

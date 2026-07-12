@@ -562,10 +562,14 @@
         // Only capture /api/ calls, skip our own issue endpoints
         if (url.indexOf("/api/") === 0 && url.indexOf("/issues/") === -1) {
           try {
+            // Strip the query string / fragment before storing. The captured
+            // URL is transmitted into the issue report, and query strings on
+            // host-app API calls may carry secrets (e.g. ?token=, ?sig=).
+            var safeUrl = url.split("?")[0].split("#")[0];
             var clone = response.clone();
             clone.text().then(function (body) {
               apiCalls.push({
-                url: url,
+                url: safeUrl,
                 status: response.status,
                 body: body.slice(0, 500),
                 ts: Date.now(),
