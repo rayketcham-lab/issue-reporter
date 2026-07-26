@@ -15,3 +15,21 @@ Thumbs.db
 # Node (dev/test tooling only — the widget itself ships zero dependencies)
 node_modules/
 package-lock.json
+
+# Local agent/tooling state
+.claude/
+.mcp.json
+
+# Never commit — these directories exist in some local checkouts that share a
+# path with a home directory. This repo is public; keep them out by default.
+secrets/
+scripts/
+
+# Stray shell/user dotfiles (see above)
+.bashrc
+.bash_profile
+.profile
+.zshrc
+.zprofile
+.gitconfig
+.ripgreprc
