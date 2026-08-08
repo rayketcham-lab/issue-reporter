@@ -2,6 +2,10 @@
 
 ![Version](https://img.shields.io/badge/version-2.3.0-blue) ![License](https://img.shields.io/badge/license-Apache%202.0-blue) ![Dependencies](https://img.shields.io/badge/dependencies-none-brightgreen) ![Size](https://img.shields.io/badge/size-~67kb-lightgrey) ![GitHub Stars](https://img.shields.io/github/stars/rayketcham-lab/issue-reporter?style=social)
 
+[![CI](https://github.com/rayketcham-lab/issue-reporter/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/rayketcham-lab/issue-reporter/actions/workflows/ci.yml)
+[![Test](https://github.com/rayketcham-lab/issue-reporter/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/rayketcham-lab/issue-reporter/actions/workflows/test.yml)
+[![CodeQL](https://github.com/rayketcham-lab/issue-reporter/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/rayketcham-lab/issue-reporter/actions/workflows/codeql.yml)
+
 Drop a feedback button on any web page. Reports become GitHub issues.
 
 No backend required. No database. No API keys beyond a GitHub token scoped to issues.
@@ -56,6 +60,9 @@ Clicking Submit should POST the order and redirect to the confirmation page.
 
 No screenshot. No GIF. That's the real output — every field above is collected automatically or filled in through three wizard steps.
 
+> [!NOTE]
+> Captured API URLs are recorded **path-only** — query strings and fragments are stripped before they reach the issue body, so a `?token=…` or `?sig=…` on one of your app's own requests is never pasted into a public issue.
+
 ## Table of Contents
 
 - [Demo](#demo)
@@ -70,7 +77,9 @@ No screenshot. No GIF. That's the real output — every field above is collected
   - [Programmatic control](#programmatic-control)
   - [Self-hosting the JS](#self-hosting-the-js)
 - [How It Works](#how-it-works)
+- [Accessibility](#accessibility)
 - [Security](#security)
+- [Development](#development)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -80,12 +89,14 @@ No screenshot. No GIF. That's the real output — every field above is collected
 - Multi-step wizard (Type → Details → Review)
 - Element inspector (click to capture DOM elements)
 - Console error capture (automatic)
-- API call capture (automatic)
+- API call capture (automatic, path-only — query strings stripped)
 - Page section detection
 - Severity levels (Low / Medium / High / Critical)
 - Expected behavior field
 - Review step before submitting
+- Keyboard accessible — WAI-ARIA dialog pattern with focus trapping and restore
 - Direct GitHub API — no backend required
+- GitHub Enterprise Server / GitHub AE support via `apiUrl`
 - Zero dependencies, single file
 
 > [!TIP]
@@ -264,9 +275,50 @@ Browser widget ──→ GitHub API directly ──→ GitHub Issues
 Browser widget ──→ GitHub Enterprise API (on-prem, via apiUrl) ──→ Issues
 ```
 
+## Accessibility
+
+The report modal implements the [WAI-ARIA dialog pattern](https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/):
+
+- `role="dialog"` + `aria-modal="true"` on the modal
+- Focus moves into the dialog on **every** wizard step, preferring the description field
+- `Tab` / `Shift+Tab` are trapped and wrap within the dialog — focus can't reach the page behind it
+- The rest of the page is set `inert` + `aria-hidden` while the modal is open, and its prior `aria-hidden` values are restored on close (so a host page managing its own `aria-hidden` isn't clobbered)
+- `Escape` closes the modal, or cancels the element inspector when it's active
+- Focus returns to the element that opened the modal, on close by any path
+
+Regressions are guarded by `tests/a11y_focus.test.mjs` in CI.
+
 ## Security
 
 See [SECURITY.md](SECURITY.md) for the disclosure policy and [Threat Model](#threat-model) above for the trust model.
+
+Two behaviors worth calling out:
+
+- **Captured API URLs are stripped to path-only** before they're written into the issue body — query strings and fragments on your app's own requests can carry tokens, signatures, or session ids that must not land in a public issue.
+- **The submitted issue type is validated** against the configured `issueTypes` list and falls back to `bug` if it doesn't match, so an arbitrary value can't become the issue's label.
+
+## Development
+
+No build step and no runtime dependencies. The only dev dependency is `jsdom`, for the tests.
+
+```bash
+npm install     # jsdom only
+npm test        # a11y focus + fetch-capture redaction tests
+node --check issue-reporter.js
+```
+
+To exercise the widget by hand, open `docs/index.html` in a browser and walk the wizard.
+
+CI runs three workflows on every push and PR to `main`:
+
+| Workflow | What it checks |
+| -------- | -------------- |
+| **CI** — `Validate widget + docs integrity` | `node --check` on the widget, and asserts the SRI hash in `README.md` and `docs/index.html` matches the sha384 of `issue-reporter.js` at the pinned immutable tag (mutable refs like `@main` are rejected) |
+| **Test** — `A11y focus tests (jsdom)` | `tests/a11y_focus.test.mjs` and `tests/fetch_capture_redaction.test.mjs` |
+| **CodeQL** — `Analyze (javascript)` | Static analysis of `issue-reporter.js` |
+
+> [!IMPORTANT]
+> Changing `issue-reporter.js` without re-tagging does **not** require an SRI update — the documented hash is pinned to the released tag, not to `main`. Regenerate it at release time, per [Supply-chain pinning](#supply-chain-pinning).
 
 ## Contributing
 
